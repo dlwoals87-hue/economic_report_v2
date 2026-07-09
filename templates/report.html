@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<title>{{REPORT_TITLE}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F6F7F9; --card:#FFFFFF; --line:#E4E7EC; --ink:#1A2027; --sub:#414C5B; --dim:#69737F;
+  --up:#D6404B; --up-bg:#FBEEEF; --down:#2B6CE6; --down-bg:#EBF1FD;
+  --gold:#A96F00; --gold-bg:#FBF3E2; --green:#0E7A5F; --green-bg:#E8F4EF;
+  --snum-bg:#1A2027; --snum-fg:#FFFFFF; --shadow:0 1px 2px rgba(26,32,39,.05);
+  --mono:'IBM Plex Mono',monospace; --sans:'Noto Sans KR',sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#14171C; --card:#1D222A; --line:#2C333E; --ink:#EAEEF4; --sub:#B3BCC8; --dim:#828D9B;
+    --up:#FF8088; --up-bg:rgba(255,128,136,.13); --down:#82B4FF; --down-bg:rgba(130,180,255,.13);
+    --gold:#E5B45B; --gold-bg:rgba(229,180,91,.14); --green:#5BD3A5; --green-bg:rgba(91,211,165,.13);
+    --snum-bg:#EAEEF4; --snum-fg:#14171C; --shadow:none;
+  }
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16.5px;line-height:1.75}
+.wrap{max-width:680px;margin:0 auto;padding:0 16px 90px}
+
+.topbar{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:680px;margin:0 auto;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}
+.brand{font-weight:900;font-size:15px}
+.badge{font-family:var(--mono);font-size:11px;color:var(--gold);background:var(--gold-bg);border-radius:4px;padding:3px 8px}
+
+.hero{padding:28px 0 6px}
+.date{font-family:var(--mono);font-size:12.5px;color:var(--dim);margin-bottom:12px}
+h1{font-size:clamp(23px,6vw,30px);font-weight:900;line-height:1.38;letter-spacing:-.02em}
+h1 .down{color:var(--down)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 4px}
+.chip{font-size:12.5px;font-weight:700;padding:4px 11px;border-radius:20px}
+.chip.gold{background:var(--gold-bg);color:var(--gold)}
+.chip.blue{background:var(--down-bg);color:var(--down)}
+.chip.green{background:var(--green-bg);color:var(--green)}
+
+.multi-note{font-size:13.5px;font-weight:700;color:var(--gold);background:var(--gold-bg);border-radius:8px;padding:9px 13px;margin:0 0 10px}
+.evt-tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.evt-tab{font-size:13.5px;font-weight:700;padding:8px 14px;border-radius:22px;border:1.5px solid var(--line);background:var(--card);color:var(--sub)}
+.evt-tab.lead{border-color:var(--snum-bg);background:var(--snum-bg);color:var(--snum-fg)}
+.evt-tab small{font-weight:500;opacity:.75;margin-left:4px}
+
+.strip{display:grid;grid-template-columns:repeat(4,1fr);background:var(--card);border:1px solid var(--line);border-radius:12px;margin:16px 0 10px;overflow:hidden;box-shadow:var(--shadow)}
+.strip>div{padding:14px 8px;text-align:center;border-right:1px solid var(--line)}
+.strip>div:last-child{border-right:0}
+.strip .k{font-size:12px;color:var(--dim)}
+.strip .v{font-family:var(--mono);font-size:20px;font-weight:600;margin-top:2px}
+.v.b{color:var(--down)}
+@media(max-width:430px){.strip .v{font-size:17px}}
+.drift{font-size:14px;color:var(--sub);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px 14px;margin-bottom:8px}
+.drift b{font-family:var(--mono);color:var(--ink)}
+.drift .fin{color:var(--down);font-weight:700}
+.sub-evt{background:var(--card);border:1px dashed var(--line);border-radius:10px;padding:12px 14px;font-size:14px;color:var(--sub)}
+.sub-evt b{color:var(--ink)}
+.sub-evt .m{font-family:var(--mono);font-weight:600}
+
+section{margin-top:36px}
+.shead{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.snum{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--snum-fg);background:var(--snum-bg);border-radius:6px;padding:2px 8px}
+.shead h2{font-size:21px;font-weight:900;letter-spacing:-.01em}
+.keyline{font-size:16.5px;font-weight:700;background:var(--card);border-left:4px solid var(--ink);border-radius:0 10px 10px 0;padding:14px 16px;margin:10px 0 14px;box-shadow:var(--shadow)}
+.keyline.up{border-color:var(--up)} .keyline.gold{border-color:var(--gold)} .keyline.dn{border-color:var(--down)}
+p{color:var(--sub)}
+p b,li b{color:var(--ink)}
+.tag{font-family:var(--mono);font-size:10.5px;color:var(--dim);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:1px 5px;vertical-align:1px;white-space:nowrap}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;box-shadow:var(--shadow)}
+
+/* verdict */
+.verdict{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.big-call{font-size:30px;font-weight:900;color:var(--up)}
+.big-score{font-family:var(--mono);font-size:30px;font-weight:600;margin-left:auto}
+.big-score em{font-style:normal;font-size:13px;color:var(--dim)}
+.gauge{width:100%;height:10px;border-radius:5px;background:linear-gradient(90deg,var(--down),var(--line) 45%,var(--line) 55%,var(--up));position:relative;margin:4px 0}
+.gauge .pin{position:absolute;top:-4px;width:4px;height:18px;border-radius:2px;background:var(--ink)}
+.gscale{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--dim);width:100%}
+.reasons{margin-top:14px;border-top:1px solid var(--line);padding-top:12px;width:100%}
+.reasons li{list-style:none;display:flex;gap:10px;margin-bottom:9px;font-size:15px;color:var(--sub)}
+.rnum{flex:none;font-family:var(--mono);font-size:12px;font-weight:600;color:var(--up);padding-top:3px}
+.confbox{width:100%;margin-top:6px;background:var(--bg);border-radius:10px;padding:13px 15px}
+.confbox .t{font-size:13px;font-weight:700;color:var(--dim);margin-bottom:8px}
+.confbox table{width:100%;border-collapse:collapse;font-size:14px}
+.confbox td{padding:4px 0;color:var(--sub)}
+.confbox td:last-child{text-align:right;font-family:var(--mono);color:var(--gold);letter-spacing:1px}
+
+/* narrative rank */
+.nrk{display:flex;flex-direction:column;gap:8px}
+.nrk-row{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 15px;box-shadow:var(--shadow)}
+.nrk-row.hot{border-color:var(--up)}
+.nrk .rk{flex:none;font-family:var(--mono);font-size:13px;font-weight:600;color:var(--dim);width:18px}
+.nrk .nm{font-size:15px;font-weight:700}
+.nrk .nm small{display:block;font-weight:400;font-size:13px;color:var(--sub)}
+.nrk .st{margin-left:auto;flex:none;font-size:13px;color:var(--gold);letter-spacing:1px;white-space:nowrap}
+.nrk-row{flex-wrap:wrap}
+.nrk .ev{flex-basis:100%;font-size:13px;color:var(--sub);border-top:1px dashed var(--line);margin-top:8px;padding-top:7px}
+.nrk .ev b{color:var(--ink)}
+
+/* 판단 변화 */
+.delta{display:flex;align-items:center;gap:10px;width:100%;background:var(--bg);border-radius:10px;padding:11px 14px;margin-top:12px;font-size:14px;color:var(--sub);flex-wrap:wrap}
+.delta .from{font-family:var(--mono);font-weight:600;color:var(--dim)}
+.delta .to{font-family:var(--mono);font-weight:600;color:var(--up)}
+.delta .ar{color:var(--dim)}
+
+/* 포지션 상태별 */
+.pos-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 17px;margin-bottom:10px;box-shadow:var(--shadow)}
+.pos-card .who{display:inline-block;font-size:12.5px;font-weight:900;border-radius:5px;padding:2px 9px;margin-bottom:7px}
+.pos-card .who.h{color:var(--green);background:var(--green-bg)}
+.pos-card .who.c{color:var(--down);background:var(--down-bg)}
+.pos-card .who.n{color:var(--gold);background:var(--gold-bg)}
+.pos-card p{font-size:14.5px}
+
+/* dashboard */
+.dash{display:grid;gap:10px}
+.dash-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 17px;box-shadow:var(--shadow)}
+.dash-card .k{font-size:12.5px;font-weight:700;color:var(--dim);display:flex;justify-content:space-between}
+.dash-card .k .src{font-weight:400;font-family:var(--mono);font-size:10.5px}
+.bigv{font-family:var(--mono);font-size:26px;font-weight:600;margin:4px 0 2px}
+.bigv small{font-family:var(--sans);font-size:13px;font-weight:700;margin-left:6px}
+.bigv .g{color:var(--green)} 
+.meter{height:8px;border-radius:4px;background:var(--bg);overflow:hidden;margin:8px 0 4px}
+.meter i{display:block;height:100%;border-radius:4px}
+.dash-card .d{font-size:13.5px;color:var(--sub)}
+.prow{display:flex;align-items:center;gap:10px;margin:9px 0}
+.prow .pk{flex:none;width:104px;font-size:13.5px;font-weight:700}
+.prow .meter{flex:1;margin:0}
+.prow .pv{flex:none;font-family:var(--mono);font-size:13px;font-weight:600;width:44px;text-align:right}
+.btriple{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.btriple>div{background:var(--bg);border-radius:8px;padding:10px;text-align:center}
+.btriple .bk{font-size:11.5px;color:var(--dim)}
+.btriple .bv{font-family:var(--mono);font-size:17px;font-weight:600;margin-top:2px}
+
+/* chain */
+.chain{display:flex;flex-direction:column}
+.node{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 16px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow)}
+.node .stage{flex:none;font-size:12px;font-weight:700;color:var(--dim);width:62px}
+.node .what{font-size:15.5px;font-weight:700}
+.node .what small{display:block;font-weight:400;font-size:13.5px;color:var(--sub);margin-top:1px}
+.arrow{align-self:center;color:var(--dim);padding:4px 0}
+.node.hot{border-color:var(--up);background:linear-gradient(0deg,var(--up-bg),var(--card))}
+
+/* reaction table */
+.rt{width:100%;border-collapse:collapse;font-size:14.5px}
+.rt th{font-size:12px;color:var(--dim);font-weight:500;text-align:left;padding:0 8px 8px;border-bottom:1px solid var(--line)}
+.rt td{padding:12px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.rt tr:last-child td{border-bottom:0}
+.rt .a{font-weight:700;white-space:nowrap}
+.rt .m{font-family:var(--mono);font-weight:600;white-space:nowrap}
+.m.up{color:var(--up)} .m.dn{color:var(--down)}
+.rt .why{color:var(--sub);font-size:14px}
+.ok{font-size:10.5px;font-weight:700;color:var(--green);background:var(--green-bg);border-radius:4px;padding:1px 6px;white-space:nowrap}
+.diff{font-size:10.5px;font-weight:700;color:var(--gold);background:var(--gold-bg);border-radius:4px;padding:1px 6px;white-space:nowrap}
+
+/* fed weights */
+.wrow{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.wrow .wk{flex:none;width:76px;font-size:14px;font-weight:700}
+.wbar{flex:1;height:22px;background:var(--bg);border-radius:6px;overflow:hidden}
+.wbar i{display:block;height:100%;border-radius:6px;background:var(--dim)}
+.wbar i.hi{background:var(--up)}
+.wrow .wv{flex:none;font-family:var(--mono);font-size:13.5px;font-weight:600;width:40px;text-align:right}
+
+/* contrarian */
+.contra{background:var(--card);border:1.5px solid var(--gold);border-radius:14px;padding:18px 20px;box-shadow:var(--shadow)}
+.contra .lb{display:inline-block;font-size:12px;font-weight:900;color:var(--gold);background:var(--gold-bg);border-radius:5px;padding:2px 9px;margin-bottom:9px;letter-spacing:.04em}
+.contra p{font-size:15.5px}
+
+/* myths */
+.myth{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:10px;box-shadow:var(--shadow)}
+.myth .no{display:inline-block;font-size:12px;font-weight:700;color:var(--up);background:var(--up-bg);border-radius:4px;padding:1px 8px;margin-bottom:6px}
+.myth .q{font-size:15.5px;font-weight:700;text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--up) 55%,transparent);text-decoration-thickness:2px}
+.myth .a{font-size:14.5px;color:var(--sub);margin-top:6px}
+
+/* similarity */
+.sim{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+.sim-row{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line)}
+.sim-row:last-child{border-bottom:0}
+.sim .pct{flex:none;font-family:var(--mono);font-size:16px;font-weight:600;color:var(--green);width:52px}
+.sim .cs{font-size:14.5px;font-weight:700}
+.sim .cs small{display:block;font-weight:400;font-size:13px;color:var(--sub)}
+.sim .r1m{margin-left:auto;flex:none;font-family:var(--mono);font-size:13.5px;font-weight:600;text-align:right}
+.sim .r1m small{display:block;font-family:var(--sans);font-size:10.5px;color:var(--dim);font-weight:400}
+.pos{color:var(--up)} .neg{color:var(--down)}
+.sim-avg{background:var(--bg);font-weight:700}
+
+/* scenarios */
+.scn{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:10px;box-shadow:var(--shadow)}
+.scn-h{display:flex;justify-content:space-between;align-items:baseline}
+.scn-h .n{font-weight:900;font-size:15.5px}
+.scn-h .p{font-family:var(--mono);font-weight:600;font-size:17px}
+.bar{height:7px;border-radius:4px;background:var(--bg);margin:8px 0 12px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:4px}
+.scn dl{display:grid;grid-template-columns:76px 1fr;row-gap:6px;font-size:14.5px}
+.scn dt{color:var(--dim);font-weight:700;font-size:13px;padding-top:2px}
+.scn dd{color:var(--sub)}
+
+/* risk list */
+.risk li{list-style:none;display:flex;gap:12px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--down);border-radius:0 12px 12px 0;padding:13px 16px;margin-bottom:8px;font-size:14.5px;color:var(--sub);box-shadow:var(--shadow)}
+.risk .rp{flex:none;font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--down);padding-top:2px;width:56px}
+
+/* checklist / track / next */
+.check li{list-style:none;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:8px;font-size:15px;color:var(--sub);box-shadow:var(--shadow)}
+.check .warn{border-left:4px solid var(--gold)}
+.track{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+.trow{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:13px 16px;border-bottom:1px solid var(--line);font-size:14.5px;color:var(--sub)}
+.trow:last-child{border-bottom:0}
+.hit{flex:none;font-size:11.5px;font-weight:700;border-radius:4px;padding:2px 8px}
+.hit.o{color:var(--green);background:var(--green-bg)} .hit.x{color:var(--up);background:var(--up-bg)}
+.hit.n{color:var(--dim);background:var(--bg)}
+.rate{font-family:var(--mono);font-weight:600;color:var(--ink)}
+.next li{list-style:none;display:flex;gap:10px;align-items:baseline;padding:12px 2px;border-bottom:1px solid var(--line);font-size:15px;color:var(--sub)}
+.next .d{flex:none;font-family:var(--mono);font-size:13px;color:var(--dim);width:48px}
+.next .s{margin-left:auto;flex:none;font-size:12px;color:var(--gold);font-family:var(--mono)}
+.lesson{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:0 12px 12px 0;padding:16px 18px;font-size:15.5px;color:var(--sub);box-shadow:var(--shadow)}
+
+/* 쉬운 설명 */
+.easy{background:var(--green-bg);border-radius:10px;padding:12px 15px;font-size:14.5px;color:var(--sub);margin-top:12px}
+.easy .lb{font-size:12px;font-weight:900;color:var(--green);margin-right:6px}
+.easy b{color:var(--ink)}
+
+/* 미니 차트 */
+.lchart{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.lc{background:var(--bg);border-radius:10px;padding:11px 12px 9px}
+.lc .ck{font-size:12px;font-weight:700;color:var(--dim)}
+.lc svg{width:100%;height:42px;margin:6px 0 2px;display:block}
+.lc polyline{fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.lc .cv{font-family:var(--mono);font-size:13.5px;font-weight:600}
+.lc .cd{font-size:11.5px;font-weight:700;margin-top:1px}
+.cd.g{color:var(--green)} .cd.n{color:var(--dim)}
+@media(max-width:430px){.lchart{grid-template-columns:1fr 1fr}.lc:first-child{grid-column:1/-1}}
+.sowhat{border-top:1px dashed var(--line);margin-top:12px;padding-top:10px;font-size:14px;color:var(--sub)}
+.sowhat .lb{font-size:12px;font-weight:900;color:var(--gold);margin-right:6px}
+.sowhat b{color:var(--ink)}
+.flink{font-family:var(--mono);font-size:10.5px;font-weight:500;color:var(--down);text-decoration:none;white-space:nowrap}
+.flink:hover{text-decoration:underline}
+.lc .ck{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+.p26{font-size:11.5px;color:var(--dim);margin-top:1px}
+
+/* 지표 해부 */
+.bd{width:100%;border-collapse:collapse;font-size:14px}
+.bd th{font-size:12px;color:var(--dim);font-weight:500;text-align:left;padding:0 8px 8px;border-bottom:1px solid var(--line)}
+.bd td{padding:11px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.bd tr:last-child td{border-bottom:0}
+.bd .c{font-weight:700}
+.bd .c small{display:block;font-weight:400;font-size:12px;color:var(--dim)}
+.bd .mv{font-family:var(--mono);font-weight:600;white-space:nowrap}
+.fav{font-size:11px;font-weight:700;color:var(--green);background:var(--green-bg);border-radius:4px;padding:1px 7px;white-space:nowrap}
+.unfav{font-size:11px;font-weight:700;color:var(--up);background:var(--up-bg);border-radius:4px;padding:1px 7px;white-space:nowrap}
+.riskchip{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:900;border-radius:8px;padding:7px 13px;margin-top:12px}
+.riskchip.low{color:var(--green);background:var(--green-bg)}
+.riskchip.mid{color:var(--gold);background:var(--gold-bg)}
+.riskchip.high{color:var(--up);background:var(--up-bg)}
+
+/* CPI 구성 스택바 */
+.wstack{display:flex;height:30px;border-radius:9px;overflow:hidden;margin:12px 0 8px}
+.wstack>span{display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden}
+.wlegend{display:flex;flex-wrap:wrap;gap:10px;font-size:12.5px;color:var(--sub);margin-bottom:4px}
+.wlegend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+
+/* 구성요소 카드 */
+.cmp{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 17px;margin-bottom:10px;box-shadow:var(--shadow)}
+.cmp-h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.cmp-h .nm{font-size:15.5px;font-weight:900}
+.cmp-h .share{font-size:11.5px;font-weight:700;color:var(--down);background:var(--down-bg);border-radius:4px;padding:1px 8px}
+.cmp-h .vd{margin-left:auto}
+.cmp .vals{font-family:var(--mono);font-size:15px;font-weight:600;margin:7px 0 5px}
+.cmp .vals .prev{color:var(--dim);font-size:13px;font-weight:500}
+.cmp .vals .dir{font-family:var(--sans);font-size:12.5px;font-weight:700;margin-left:6px}
+.dir.g{color:var(--green)} .dir.r{color:var(--up)}
+.cmp .ex{font-size:14px;color:var(--sub)}
+.cmp .ex b{color:var(--ink)}
+.cmp.hero-cmp{border-color:var(--gold)}
+
+/* 2행 숫자 스트립 */
+.strip2{display:grid;grid-template-columns:88px repeat(3,1fr);background:var(--card);border:1px solid var(--line);border-radius:12px;margin:16px 0 6px;overflow:hidden;box-shadow:var(--shadow)}
+.strip2>div{padding:11px 8px;text-align:center;border-bottom:1px solid var(--line)}
+.strip2>div:nth-last-child(-n+4){border-bottom:0}
+.s2h{font-size:12px;color:var(--dim);background:var(--bg)}
+.s2l{font-size:12.5px;font-weight:700;text-align:left !important;padding-left:14px !important;display:flex;align-items:center}
+.s2v{font-family:var(--mono);font-size:18px;font-weight:600}
+.s2v.b{color:var(--down)}
+.s2v small{display:block;font-family:var(--sans);font-size:10.5px;font-weight:700;color:var(--green)}
+.stripnote{font-size:13px;color:var(--dim);margin-bottom:8px}
+.stripnote b{color:var(--sub)}
+@media(max-width:430px){.s2v{font-size:15.5px}}
+
+/* 자산 응용 한 줄 */
+.ap{display:block;font-size:12.5px;color:var(--gold);font-weight:700;margin-top:3px}
+
+/* 점수대별 읽는 법 */
+.bands{width:100%;margin-top:14px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.band{display:flex;gap:10px;align-items:baseline;padding:9px 13px;font-size:13.5px;color:var(--sub);border-bottom:1px solid var(--line)}
+.band:last-child{border-bottom:0}
+.band .rg{flex:none;font-family:var(--mono);font-size:12px;font-weight:600;width:56px;color:var(--dim)}
+.band.now{background:var(--up-bg)}
+.band.now .rg{color:var(--up)}
+.band b{color:var(--ink)}
+
+/* 오해 실제 사례 */
+.myth .case{font-size:13.5px;color:var(--sub);margin-top:8px;border-top:1px dashed var(--line);padding-top:8px}
+.myth .case .clb{font-size:11px;font-weight:900;color:var(--down);background:var(--down-bg);border-radius:4px;padding:1px 7px;margin-right:6px}
+
+/* 유사사례 스토리 */
+.sim .story{display:block;font-weight:400;font-size:13px;color:var(--sub);margin-top:3px}
+
+/* 반응표 과거 비교 */
+.rt .m small{display:block;font-family:var(--sans);font-size:10.5px;color:var(--dim);font-weight:500;margin-top:2px}
+.rt .m small em{font-style:normal;font-weight:700}
+.rt .m small em.st{color:var(--up)} .rt .m small em.wk{color:var(--gold)}
+
+/* 자산 아코디언 */
+details.acc{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:8px;box-shadow:var(--shadow);overflow:hidden}
+.acc summary{display:flex;align-items:center;gap:10px;padding:13px 15px;cursor:pointer;list-style:none;flex-wrap:wrap}
+.acc summary::-webkit-details-marker{display:none}
+.acc .an{font-size:15px;font-weight:800;flex:none}
+.acc .achip{flex:none}
+.acc .av{margin-left:auto;text-align:right;font-family:var(--mono);font-size:15.5px;font-weight:600;white-space:nowrap}
+.acc .av small{display:block;font-family:var(--sans);font-size:10.5px;color:var(--dim);font-weight:500}
+.acc .car{flex:none;color:var(--dim);font-size:12px;transition:transform .15s}
+.acc[open] .car{transform:rotate(90deg)}
+.acc[open] summary{border-bottom:1px solid var(--line)}
+.abody{padding:13px 16px;font-size:14.5px;color:var(--sub)}
+.abody b{color:var(--ink)}
+.abody .al{display:inline-block;font-size:11.5px;font-weight:900;color:var(--down);background:var(--down-bg);border-radius:4px;padding:1px 8px;margin:8px 0 4px}
+.abody .al.g{color:var(--gold);background:var(--gold-bg)}
+.abody p{font-size:14.5px;margin:0}
+.acchint{font-size:12.5px;color:var(--dim);margin:2px 0 10px}
+
+/* 유사사례 아코디언 */
+details.simacc{border-bottom:1px solid var(--line)}
+details.simacc:last-of-type{border-bottom:0}
+.simacc summary{cursor:pointer;list-style:none}
+.simacc summary::-webkit-details-marker{display:none}
+.simacc .sbody{padding:4px 16px 15px;font-size:14px;color:var(--sub);background:var(--bg)}
+.simacc .sbody b{color:var(--ink)}
+.simacc .srow{display:flex;gap:10px;margin-top:8px}
+.simacc .srow .sk{flex:none;width:52px;font-size:12px;font-weight:900;color:var(--dim);padding-top:2px}
+.simacc[open] summary .sim-row{background:var(--bg)}
+
+/* 기관 자금흐름 다이어그램 */
+.flowwrap{display:grid;grid-template-columns:1fr 34px 1fr;gap:0;align-items:stretch;margin-top:6px}
+.fcol{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 15px;box-shadow:var(--shadow)}
+.fcol .ft{font-size:13px;font-weight:900;margin-bottom:9px}
+.fcol.out .ft{color:var(--up)} .fcol.in .ft{color:var(--green)}
+.fitem{font-size:14px;font-weight:700;padding:8px 0;border-top:1px dashed var(--line)}
+.fitem small{display:block;font-weight:400;font-size:12.5px;color:var(--sub);margin-top:1px}
+.farr{display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:18px}
+@media(max-width:480px){.flowwrap{grid-template-columns:1fr}.farr{padding:4px 0;transform:rotate(90deg)}}
+
+/* 근거 원문 링크 */
+.srcs{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.srcs a{font-size:12.5px;font-weight:700;color:var(--down);background:var(--down-bg);border-radius:6px;padding:5px 11px;text-decoration:none}
+.srcs a:hover{text-decoration:underline}
+.disclaimer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);font-size:12.5px;color:var(--dim)}
+</style>
+</head>
+<body>
+
+<div class="topbar"><div class="topbar-in">
+  <div class="brand">{{BRAND_NAME}}</div>
+  <div class="badge">{{SAMPLE_BADGE}}</div>
+</div></div>
+
+<div class="wrap">
+
+<div class="hero">
+  <div class="date">{{REPORT_DATETIME}}</div>
+  <div class="multi-note">{{MULTI_EVENT_NOTE}}</div>
+  <div class="evt-tabs">
+    <span class="evt-tab lead">{{INDICATOR_NAME}} <small>{{LEAD_EVENT_LABEL}}</small></span>
+    <span class="evt-tab">{{SECONDARY_EVENT_NAME}} <small>{{SECONDARY_EVENT_LABEL}}</small></span>
+  </div>
+  <h1>{{HEADLINE_PREFIX}} <span class="down">{{CPI_ACTUAL}}</span>, {{HEADLINE_SURPRISE}} —<br>{{HEADLINE_MESSAGE}}</h1>
+  <div class="chips">
+    <span class="chip gold">{{IMPORTANCE_LABEL}}</span>
+    <span class="chip blue">{{SURPRISE_LABEL}}</span>
+    <span class="chip green">{{DETAIL_CONFIRM_LABEL}}</span>
+    <span class="chip green">{{NARRATIVE_FIT_LABEL}}</span>
+  </div>
+  <div class="strip2">
+    <div class="s2h"></div><div class="s2h">{{TABLE_ACTUAL_LABEL}}</div><div class="s2h">{{TABLE_EXPECTED_LABEL}}</div><div class="s2h">{{TABLE_PREVIOUS_LABEL}}</div>
+    <div class="s2l">{{INDICATOR_NAME}}<br><span style="font-weight:400;color:var(--dim);font-size:11px">{{CPI_SUBLABEL}}</span></div><div class="s2v b">{{CPI_ACTUAL}}<small>{{CPI_SURPRISE_DELTA}}</small></div><div class="s2v">{{CPI_EXPECTED}}</div><div class="s2v">{{CPI_PREVIOUS}}</div>
+    <div class="s2l">{{CORE_INDICATOR_NAME}}<br><span style="font-weight:400;color:var(--dim);font-size:11px">{{CORE_CPI_SUBLABEL}}</span></div><div class="s2v b">{{CORE_CPI_ACTUAL}}<small>{{CORE_CPI_SURPRISE_DELTA}}</small></div><div class="s2v">{{CORE_CPI_EXPECTED}}</div><div class="s2v">{{CORE_CPI_PREVIOUS}}</div>
+  </div>
+  <div class="stripnote">{{STRIP_NOTE_PREFIX}} <b>{{STRIP_NOTE_BOLD}}</b> — {{STRIP_NOTE_SUFFIX}}</div>
+  <div class="drift">{{EXPECTATION_PATH_PREFIX}} <b>{{EXPECTATION_48H}}</b> → {{EXPECTATION_24H_LABEL}} <b>{{EXPECTATION_24H}}</b> → 실제 <b class="fin">{{CPI_ACTUAL}}</b> — {{EXPECTATION_PATH_COMMENT}}<br><span style="font-size:13px;color:var(--dim)"><b style="color:var(--sub)">{{EXPECTATION_SOURCE_LABEL}}</b> {{EXPECTATION_SOURCE_TEXT}} <b style="color:var(--sub)">{{EXPECTATION_WHY_LABEL}}</b> {{EXPECTATION_WHY_TEXT}} <span class="tag">사실</span></span></div>
+  <div class="sub-evt"><b>{{SECONDARY_EVENT_TITLE}}</b> <span class="m">{{SECONDARY_EVENT_ACTUAL}}</span> ({{TABLE_EXPECTED_LABEL}} {{SECONDARY_EVENT_EXPECTED}}) — {{SECONDARY_EVENT_SUMMARY}} <span class="tag">추론</span></div>
+</div>
+
+<!-- 01 -->
+<section>
+  <div class="shead"><span class="snum">01</span><h2>{{SECTION_1_TITLE}}</h2></div>
+  <div class="card">
+    <div class="verdict">
+      <div class="big-call">{{OVERALL_CALL}}</div>
+      <div class="big-score">{{OVERALL_SCORE}}<em>/100</em></div>
+      <div class="gauge"><span class="pin" style="left:72%"></span></div>
+      <div class="gscale"><span>Bearish</span><span>50</span><span>Bullish</span></div>
+      <div class="bands">
+        <div class="band"><span class="rg">0–30</span><span><b>약세 확신 구간</b> — 방어가 우선인 국면. "지금 내 포지션 중 무엇이 이 환경에 취약한가"를 점검할 때</span></div>
+        <div class="band"><span class="rg">30–45</span><span><b>약세 우위</b> — 반등은 되돌림일 가능성. 신규 진입보다 관망에 무게</span></div>
+        <div class="band"><span class="rg">45–55</span><span><b>중립</b> — 방향 판단 자체를 보류할 구간. 다음 이벤트 확인이 우선</span></div>
+        <div class="band"><span class="rg">55–70</span><span><b>강세 우위</b> — 보유자는 유지 점검, 신규는 조건부 진입 계획 수립 구간</span></div>
+        <div class="band now"><span class="rg">70–85</span><span><b>{{CURRENT_BAND_TITLE}}</b> — {{CURRENT_BAND_TEXT_PREFIX}} <b>{{CURRENT_BAND_TEXT_BOLD}}</b> — {{CURRENT_BAND_TEXT_SUFFIX}}</span></div>
+        <div class="band"><span class="rg">85–100</span><span><b>강한 확신</b> — 드물게 나오는 구간. 역설적으로 모두가 확신할 때라 과열 역신호로도 겸용</span></div>
+      </div>
+      <p style="font-size:12.5px;color:var(--dim);margin-top:8px;width:100%">{{SCORE_EXPLANATION}}</p>
+      <ul class="reasons">
+        <li><span class="rnum">1</span><span><b>{{REASON_1_TITLE}}</b> {{REASON_1_TEXT}} <span class="tag">사실</span></span></li>
+        <li><span class="rnum">2</span><span><b>{{REASON_2_TITLE}}</b> {{REASON_2_TEXT}} <span class="tag">사실</span></span></li>
+        <li><span class="rnum">3</span><span><b>{{REASON_3_TITLE}}</b> {{REASON_3_TEXT}} <span class="tag">추론</span></span></li>
+      </ul>
+      <div class="easy"><span class="lb">쉽게 말하면</span>{{EASY_SUMMARY_PREFIX}} <b>{{EASY_SUMMARY_BOLD_1}}</b>{{EASY_SUMMARY_MIDDLE}} <b>{{EASY_SUMMARY_BOLD_2}}</b>{{EASY_SUMMARY_SUFFIX}}</div>
+      <div class="delta">
+        <span><b>{{DELTA_LABEL}}</b></span>
+        <span class="from">{{PREVIOUS_CALL}}</span><span class="ar">→</span><span class="to">{{CURRENT_CALL}}</span>
+        <span style="flex-basis:100%;font-size:13.5px">{{DELTA_REASON_LINE}}<br>= <b style="color:var(--ink)">{{DELTA_REASON_BOLD}}</b>{{DELTA_REASON_SUFFIX}}</span>
+      </div>
+      <div class="confbox">
+        <div class="t">{{CONFIDENCE_TITLE}}</div>
+        <table>
+          <tr><td>{{CONF_1_LABEL}}</td><td>★★★★★</td></tr>
+          <tr><td>{{CONF_2_LABEL}}</td><td>★★★★★</td></tr>
+          <tr><td>{{CONF_3_LABEL}}</td><td>★★☆☆☆</td></tr>
+          <tr><td>{{CONF_4_LABEL}}</td><td>★★★☆☆</td></tr>
+          <tr><td>{{CONF_5_LABEL}}</td><td>★★★☆☆</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 02 -->
+<section>
+  <div class="shead"><span class="snum">02</span><h2>{{SECTION_2_TITLE}}</h2></div>
+  <div class="keyline">{{MARKET_FOCUS_KEYLINE}}</div>
+  <p style="margin-bottom:12px">"시장의 관심사"란 지금 투자자들이 <b>가장 무서워하거나 가장 기대하는 것</b>이다. 뉴스는 매일 수십 개 나오지만, 시장은 관심사에 꽂히는 뉴스에만 크게 반응한다. 그래서 지표를 보기 전에 "지금 시장이 뭘 보고 있나"를 먼저 확인해야 한다.</p>
+  <div class="nrk">
+    <div class="nrk-row hot"><span class="rk">1</span><div class="nm">{{FOCUS_1_NAME}}<small>{{FOCUS_1_NOTE}}</small></div><span class="st">★★★★★</span>
+      <div class="ev"><b>왜 1순위인가:</b> 먼저 원리 — <b>금리는 모든 자산의 "가격표"다.</b> 주식의 가치는 미래 이익을 현재 가치로 환산한 것인데, 그 환산에 쓰는 게 금리라서 금리가 내리면 같은 이익도 더 비싸게 쳐준다. 다만 금리가 <b>얼마나 지배적인지는 시기마다 다르고</b>, 그걸 재는 게 주가–금리 상관계수다. ① 최근 20거래일 S&amp;P500–2년물 상관 <b>−0.78</b>, 60거래일은 −0.55 — 원래도 반대로 움직였지만 <b>최근 한 달 들어 금리 지배력이 눈에 띄게 강해졌다</b>(−1에 가까울수록 "금리 내리면 주가 오르는" 관계가 강함. 10일 같은 짧은 창은 우연에 휘둘려서 20일과 60일을 함께 본다). ② 최근 한 달 시장이 가장 크게 출렁인 3일이 전부 금리 이벤트일(CPI·FOMC 의사록·고용보고서). ③ 경제 뉴스 헤드라인에서 연준·금리 키워드가 4주 연속 빈도 1위. <span class="tag">사실</span></div>
+    </div>
+    <div class="nrk-row"><span class="rk">2</span><div class="nm">{{FOCUS_2_NAME}}<small>{{FOCUS_2_NOTE}}</small></div><span class="st">★★★★☆</span></div>
+    <div class="nrk-row"><span class="rk">3</span><div class="nm">{{FOCUS_3_NAME}}<small>{{FOCUS_3_NOTE}}</small></div><span class="st">★★★☆☆</span></div>
+    <div class="nrk-row"><span class="rk">4</span><div class="nm">{{FOCUS_4_NAME}}<small>{{FOCUS_4_NOTE}}</small></div><span class="st">★★☆☆☆</span></div>
+  </div>
+  <p style="font-size:13.5px;color:var(--dim);margin-top:10px">순위 산정 방식: 자산–변수 간 상관계수, 이벤트일 변동성 기여도, 뉴스 키워드 빈도 3가지를 주 1회 재계산. 순위가 바뀌면 같은 지표도 반응이 달라지므로 매 리포트에서 갱신 표시한다.</p>
+</section>
+
+<!-- 03 -->
+<section>
+  <div class="shead"><span class="snum">03</span><h2>{{SECTION_3_TITLE}}</h2></div>
+  <div class="keyline gold">{{DASHBOARD_KEYLINE}}</div>
+  <div class="dash">
+    <div class="dash-card">
+      <div class="k"><span>{{LIQUIDITY_LABEL}}</span><span class="src">FRED · WALCL−RRP−TGA</span></div>
+      <div class="bigv">{{LIQUIDITY_SCORE}}<small class="g">{{LIQUIDITY_STATUS}}</small></div>
+      <div class="meter"><i style="width:85%;background:var(--green)"></i></div>
+      <div class="d">유동성 = <b>시장에 실제로 돌아다닐 수 있는 돈의 양</b>. 돈이 많이 풀려 있으면 악재는 얕게, 호재는 깊게 반영된다.</div>
+      <div class="d" style="margin-top:8px;background:var(--bg);border-radius:8px;padding:9px 12px"><b>얼마나 빠른 증가인가 (비교군):</b> 최근 8주 순유동성 증가폭은 <b>+$3,100억</b>. 과거 3년의 모든 "8주 변화"와 비교하면 <b>상위 9%</b> — 평상시보다 확실히 빠른 확장이다. 참고로 2022년 약세장 당시엔 같은 8주 기준 −$2,000억대 감소가 일상이었다. <span class="tag">사실</span></div>
+      <div class="lchart">
+        <div class="lc">
+          <div class="ck"><span>순유동성 (26주)</span><a class="flink" href="https://fred.stlouisfed.org/series/WALCL" target="_blank" rel="noopener">FRED↗</a></div>
+          <svg viewBox="0 0 100 40" preserveAspectRatio="none">
+            <polyline points="0,30 8,32 16,28 24,31 32,27 40,29 48,25 56,26 64,22 70,19 78,15 86,12 93,9 100,6" style="stroke:var(--dim);opacity:.45"/>
+            <polyline points="70,19 78,15 86,12 93,9 100,6" style="stroke:var(--green)"/>
+          </svg>
+          <div class="cv">{{NET_LIQUIDITY_VALUE}}</div><div class="cd g">{{NET_LIQUIDITY_NOTE}}</div>
+        </div>
+        <div class="lc">
+          <div class="ck"><span>역레포 RRP (26주)</span><a class="flink" href="https://fred.stlouisfed.org/series/RRPONTSYD" target="_blank" rel="noopener">FRED↗</a></div>
+          <svg viewBox="0 0 100 40" preserveAspectRatio="none">
+            <polyline points="0,4 8,6 16,8 24,7 32,10 40,13 48,15 56,18 64,20 70,23 78,26 86,29 93,32 100,35" style="stroke:var(--dim);opacity:.45"/>
+            <polyline points="70,23 78,26 86,29 93,32 100,35" style="stroke:var(--green)"/>
+          </svg>
+          <div class="cv">{{RRP_VALUE}}</div><div class="cd g">{{RRP_NOTE}}</div>
+        </div>
+        <div class="lc">
+          <div class="ck"><span>재무부 잔고 TGA (26주)</span><a class="flink" href="https://fred.stlouisfed.org/series/WTREGEN" target="_blank" rel="noopener">FRED↗</a></div>
+          <svg viewBox="0 0 100 40" preserveAspectRatio="none">
+            <polyline points="0,20 8,16 16,22 24,18 32,12 40,17 48,14 56,19 64,16 70,20 78,18 86,21 93,23 100,25" style="stroke:var(--dim);opacity:.45"/>
+            <polyline points="70,20 78,18 86,21 93,23 100,25" style="stroke:var(--dim)"/>
+          </svg>
+          <div class="cv">{{TGA_VALUE}}</div><div class="cd n">{{TGA_NOTE}}</div>
+        </div>
+      </div>
+      <div class="d" style="font-size:12.5px;margin-top:4px">연한 선 = 26주 전체 · 진한 선 = 최근 8주. 26주는 큰 그림의 위치, 최근 8주는 지금의 속도.</div>
+      <div class="sowhat"><span class="lb">기간 읽는 법</span>연한 26주 선은 <b>큰 그림에서의 위치</b>, 진한 최근 8주 구간은 <b>지금의 속도</b>다. 둘 다 봐야 한다 — 같은 상승이라도 바닥에서 갓 반등한 것과, 이미 상단에서 더 가속하는 것(지금)은 의미가 다르다. 원본 데이터는 각 FRED 링크에서 직접 확인 가능.</div>
+      <div class="sowhat"><span class="lb">용어 30초</span><b>RRP(역레포)</b>는 기관들이 연준에 잠시 맡겨둔 돈 — 줄어들수록 그 돈이 시장으로 나온다(호재). <b>TGA</b>는 미국 정부의 통장 잔고 — 늘어나면 시중 돈을 빨아들인다(악재). 순유동성 = 연준 자산 − RRP − TGA.</div>
+      <div class="sowhat"><span class="lb">과거 비슷한 국면</span>지금처럼 <b>RRP 급감이 순유동성 확장을 이끈 국면은 최근 3년 중 두 번</b>(2023-06~09, 2023-11~2024-02 · 샘플 기준). 두 번 모두 3개월간 S&amp;P500이 상승했고(+8%, +14%) 중간 조정은 −3% 이내로 얕았다. 단 <b>표본이 2회뿐</b>이고 두 번 다 지금보다 포지셔닝이 가벼웠다 — 그대로 반복된다고 기대하면 안 되는 이유. <span class="tag">사실+추론</span></div>
+      <div class="sowhat"><span class="lb">앞으로는? — 둔화 vs 추가 확장</span><b>둔화 근거가 더 무겁다.</b> ① 이번 확장의 연료인 RRP 잔고가 $2,620억으로 <b>거의 바닥</b> — 고점($2.5조) 대비 90% 소진돼 이 동력은 몇 달 내 꺼진다. ② 재무부가 분기 발행계획(QRA)에서 TGA를 $8,500억으로 <b>재적립</b>하겠다고 밝힌 상태 — 채워지는 만큼 시중 돈을 빨아들인다. 반대로 <b>추가 확장 근거</b>는 ① 연준이 QT(보유자산 축소) 종료를 시사했고 ② 재적립이 단기채 위주면 MMF 자금이 흡수를 상쇄한다는 것. 종합: <b>"확장은 맞지만 연료가 유한한 확장"</b> — 지금의 우호 환경을 상수로 두지 말고, RRP 바닥 도달과 QRA 발표(분기마다)를 유동성 국면 전환의 예약된 체크포인트로 삼을 것. <span class="tag">사실+추론 · 수치는 샘플</span></div>
+      <div class="sowhat"><span class="lb">그래서?</span>유동성 확장기에는 <b>조정이 와도 얕고 짧게 끝나는 경향</b>이 있다. 이번에 약세 시나리오(20%)가 현실화되더라도 "패닉"보다 "되돌림"으로 볼 근거가 되고, 반대로 이 세 차트가 꺾이기 시작하면 같은 호재에도 시장 반응이 무뎌지는 신호다. <span class="tag">추론</span></div>
+    </div>
+    <div class="dash-card">
+      <div class="k"><span>{{POSITIONING_TITLE}}</span><span class="src">CFTC COT(3일 지연) · CBOE · AAII</span></div>
+      <div class="d" style="margin-bottom:6px">포지셔닝 = <b>사람들이 이미 얼마나 "상승"에 베팅해 놨는가</b>. 숫자는 지난 1년 중 백분위 — 78%면 지난 1년 중 상위 22% 수준으로 쏠렸다는 뜻.</div>
+      <div class="prow"><span class="pk">{{POSITIONING_1_LABEL}}</span><div class="meter"><i style="width:78%;background:var(--gold)"></i></div><span class="pv">{{FUTURES_POSITIONING}}</span></div>
+      <div class="d" style="font-size:13px;margin:-3px 0 8px">전문 투기자금(헤지펀드 등)의 주가지수 상승 베팅 규모</div>
+      <div class="prow"><span class="pk">{{POSITIONING_2_LABEL}}</span><div class="meter"><i style="width:70%;background:var(--gold)"></i></div><span class="pv">{{OPTION_OPTIMISM}}</span></div>
+      <div class="d" style="font-size:13px;margin:-3px 0 8px">풋(하락 보험)보다 콜(상승 베팅) 옵션을 얼마나 더 사는지</div>
+      <div class="prow"><span class="pk">{{POSITIONING_3_LABEL}}</span><div class="meter"><i style="width:64%;background:var(--gold)"></i></div><span class="pv">{{RETAIL_OPTIMISM}}</span></div>
+      <div class="d" style="font-size:13px;margin:-3px 0 4px">미국 개인투자자 설문에서 "오른다" − "내린다" 응답 차이</div>
+      <div class="sowhat"><span class="lb">그래서?</span>쏠림이 높다 = <b>살 사람이 이미 대부분 샀다</b>는 뜻. 그러면 ① 호재가 나와도 새로 사줄 사람이 적어 <b>덜 오르고</b> ② 악재가 나오면 팔 사람이 많아 <b>크게 흔들린다</b>. 지금 세 축 모두 60%+ 과열 구간 → 이 리포트가 Bullish면서도 "추격 매수 주의"를 반복하는 이유가 이 카드다. 반대로 이 게이지가 30% 밑으로 식은 뒤의 호재가 진짜 크게 가는 호재다. <span class="tag">사실+추론</span></div>
+    </div>
+    <div class="dash-card">
+      <div class="k"><span>시장 폭 (Breadth) — 건강한 상승인가</span><span class="src">NYSE 당일 집계</span></div>
+      <div class="btriple">
+        <div><div class="bk">{{BREADTH_ADVANCERS_LABEL}}</div><div class="bv" style="color:var(--up)">{{BREADTH_ADVANCERS}}</div></div>
+        <div><div class="bk">{{BREADTH_HIGHS_LABEL}}</div><div class="bv">{{BREADTH_HIGHS}}</div></div>
+        <div><div class="bk">{{BREADTH_LOWS_LABEL}}</div><div class="bv">{{BREADTH_LOWS}}</div></div>
+      </div>
+      <div class="d" style="margin-top:8px">{{BREADTH_SUMMARY}} <span class="tag">사실</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 04 -->
+<section>
+  <div class="shead"><span class="snum">04</span><h2>{{SECTION_4_TITLE}}</h2></div>
+  <div class="keyline">{{ANATOMY_KEYLINE}}</div>
+  <p>시장이 진짜 보는 건 평균 숫자(2.6%)가 아니라 <b>그 평균이 뭘로 만들어졌는가</b>다. 헤드라인이 좋아도 속살이 나쁘면 몇 시간 뒤 반응이 뒤집힌다. 먼저 CPI가 뭘로 구성돼 있는지부터:</p>
+
+  <div class="wstack">
+    <span style="width:36%;background:#B37200">{{COMPONENT_STACK_1}}</span>
+    <span style="width:25%;background:#6B7A8F">{{COMPONENT_STACK_2}}</span>
+    <span style="width:19%;background:#8898AB">{{COMPONENT_STACK_3}}</span>
+    <span style="width:13%;background:#A9B4C2">{{COMPONENT_STACK_4}}</span>
+    <span style="width:7%;background:#C3CBD6">{{COMPONENT_STACK_5}}</span>
+  </div>
+  <div class="wlegend"><span><i style="background:#C3CBD6"></i>{{ENERGY_LEGEND}}</span><span style="color:var(--gold);font-weight:700">{{COMPONENT_LEGEND_NOTE}}</span></div>
+
+  <div class="cmp hero-cmp">
+    <div class="cmp-h"><span class="nm">{{COMPONENT_1_NAME}}</span><span class="share">{{COMPONENT_1_SHARE}}</span><span class="vd fav">{{COMPONENT_1_VERDICT}}</span></div>
+    <div class="vals">{{COMPONENT_1_VALUE}} <span class="prev">{{COMPONENT_1_PREVIOUS}}</span><span class="dir g">{{COMPONENT_1_DIRECTION}}</span></div>
+    <div class="ex"><b>왜 제일 중요한가:</b> 비중이 가장 클 뿐 아니라 가장 <b>늦게 움직이는</b> 항목이다. 전월세 계약은 보통 1년 단위라, 시장 임대료가 내려도 CPI엔 1년 가까이 늦게 반영된다. 그래서 "물가와의 전쟁"의 마지막 보스가 늘 주거였고, <b>이게 꺾였다는 건 CPI 하락이 일회성이 아니라 이어질 가능성이 크다는 신호</b>다.</div>
+  </div>
+
+  <div class="cmp">
+    <div class="cmp-h"><span class="nm">{{COMPONENT_2_NAME}}</span><span class="share">{{COMPONENT_2_SHARE}}</span><span class="vd fav">{{COMPONENT_2_VERDICT}}</span></div>
+    <div class="vals">{{COMPONENT_2_VALUE}} <span class="prev">{{COMPONENT_2_PREVIOUS}}</span><span class="dir g">{{COMPONENT_2_DIRECTION}}</span></div>
+    <div class="ex">외식·보험·미용 같은 서비스 가격. <b>인건비가 대부분이라 임금 압력의 온도계</b>다. 파월 의장이 "가장 주시한다"고 지목했던 바로 그 지표 — 이게 식었다는 건 임금발 인플레 걱정도 줄었다는 뜻.</div>
+  </div>
+
+  <div class="cmp">
+    <div class="cmp-h"><span class="nm">{{COMPONENT_3_NAME}}</span><span class="share">{{COMPONENT_3_SHARE}}</span><span class="vd fav">{{COMPONENT_3_VERDICT}}</span></div>
+    <div class="vals">{{CORE_CPI_ACTUAL}} <span class="prev">{{COMPONENT_3_PREVIOUS}}</span><span class="dir g">{{COMPONENT_3_DIRECTION}}</span></div>
+    <div class="ex">에너지·식품은 유가나 날씨로 널뛰어서, 연준은 이 둘을 뺀 "근원"으로 진짜 추세를 본다. <b>헤드라인만 좋고 근원이 나빴다면 오늘 상승은 하루짜리였을 것</b> — 이번엔 근원까지 예상을 밑돌았다.</div>
+  </div>
+
+  <div class="cmp">
+    <div class="cmp-h"><span class="nm">{{COMPONENT_4_NAME}}</span><span class="share">{{COMPONENT_4_SHARE}}</span><span class="vd fav">{{COMPONENT_4_VERDICT}}</span></div>
+    <div class="vals">{{COMPONENT_4_VALUE}} <span class="prev">{{COMPONENT_4_PREVIOUS}}</span><span class="dir g">{{COMPONENT_4_DIRECTION}}</span></div>
+    <div class="ex">물건값은 이미 작년부터 내림세. 새로운 정보는 아니지만 방향을 거스르지 않았다.</div>
+  </div>
+
+  <div class="cmp">
+    <div class="cmp-h"><span class="nm">{{COMPONENT_5_NAME}}</span><span class="share">{{COMPONENT_5_SHARE}}</span><span class="vd unfav">{{COMPONENT_5_VERDICT}}</span></div>
+    <div class="vals">{{COMPONENT_5_VALUE}} <span class="prev">{{COMPONENT_5_PREVIOUS}}</span><span class="dir r">{{COMPONENT_5_DIRECTION}}</span></div>
+    <div class="ex">장바구니 물가는 오히려 살짝 올랐다. 시장엔 영향이 작지만 <b>소비심리와 정치권 압박</b>으로는 이어질 수 있는 항목.</div>
+  </div>
+
+  <div class="riskchip low">{{REINTERPRETATION_RISK}}</div>
+  <p style="font-size:14.5px;margin-top:12px"><b>왜 이 판정이 중요한가:</b> "헤드라인 하회 → 급등 → 세부 확인 후 반락"은 반복되는 패턴이다. 예컨대 에너지 하락 덕에 평균은 낮게 나왔는데 까보니 주거가 +0.5%로 튀어 있으면, 알고리즘이 만든 첫 급등을 사람이 정규장에서 되돌린다. 이 서비스는 세부가 헤드라인과 <b>반대 방향이면 재해석 리스크를 '높음'으로 올리고 종합 점수를 자동 하향</b>한다. <span class="tag">사실+추론</span></p>
+  <div class="easy"><span class="lb">쉽게 말하면</span>반 평균(헤드라인)만 오른 게 아니라 <b>제일 안 오르던 과목(주거·서비스)까지 같이 올랐다</b>. 평균만 좋고 주요 과목이 나빴다면 오늘 밤 상승은 내일 사라질 수 있는 상승이었다.</div>
+</section>
+
+<!-- 05 -->
+<section>
+  <div class="shead"><span class="snum">05</span><h2>{{SECTION_5_TITLE}}</h2></div>
+  <div class="keyline up">{{CHAIN_KEYLINE}}</div>
+  <div class="chain">
+    <div class="node"><span class="stage">{{CHAIN_1_STAGE}}</span><div class="what">{{CHAIN_1_TITLE}}<small>{{CHAIN_1_NOTE}}</small></div></div>
+    <div class="arrow">▼</div>
+    <div class="node"><span class="stage">{{CHAIN_2_STAGE}}</span><div class="what">{{CHAIN_2_TITLE}}<small>{{CHAIN_2_NOTE}}</small></div></div>
+    <div class="arrow">▼</div>
+    <div class="node"><span class="stage">{{CHAIN_3_STAGE}}</span><div class="what">{{CHAIN_3_TITLE}}<small>{{CHAIN_3_NOTE}}</small></div></div>
+    <div class="arrow">▼</div>
+    <div class="node"><span class="stage">{{CHAIN_4_STAGE}}</span><div class="what">{{CHAIN_4_TITLE}}<small>{{CHAIN_4_NOTE}}</small></div></div>
+    <div class="arrow">▼</div>
+    <div class="node hot"><span class="stage">{{CHAIN_5_STAGE}}</span><div class="what">{{CHAIN_5_TITLE}}<small>{{CHAIN_5_NOTE}}</small></div></div>
+  </div>
+</section>
+
+<!-- 06 -->
+<section>
+  <div class="shead"><span class="snum">06</span><h2>{{SECTION_6_TITLE}}</h2></div>
+  <div class="acchint">{{ASSET_ACCORDION_HINT}}</div>
+
+  <details class="acc"><summary><span class="car">▶</span><span class="an">{{ASSET_1_NAME}}</span><span class="achip ok">{{ASSET_MATCH_LABEL}}</span><span class="av up" style="color:var(--up)">{{ASSET_1_MOVE}}<small>{{ASSET_1_NOTE}}</small></span></summary>
+    <div class="abody"><span class="al">왜 움직였나</span><p>금리 기대가 내려가면 "미래 이익"의 현재 가치가 커진다. 나스닥은 이익의 대부분이 먼 미래에 있는 성장주 집합이라 할인율 완화의 최대 수혜.</p>
+    <span class="al">왜 평균보다 약한가</span><p>같은 급의 서프라이즈 사례들 평균은 +1.4%였다. 이번이 약한 건 <b>이미 롱으로 쏠려 있어 새로 사줄 자금이 적었기 때문</b> — 재료 문제가 아니라 수급 문제.</p>
+    <span class="al g">응용</span><p>이 상승의 엔진은 금리다. <b>내일부터는 나스닥이 아니라 2년물을 먼저 볼 것</b> — 원인을 보면 결과의 반전을 하루 먼저 안다.</p></div>
+  </details>
+
+  <details class="acc"><summary><span class="car">▶</span><span class="an">{{ASSET_2_NAME}}</span><span class="achip ok">{{ASSET_MATCH_LABEL}}</span><span class="av" style="color:var(--up)">{{ASSET_2_MOVE}}<small>{{ASSET_2_NOTE}}</small></span></summary>
+    <div class="abody"><span class="al">왜 움직였나</span><p>중소형주는 대출이 변동금리 위주라 <b>금리가 손익에 직접 꽂히는</b> 기업들이다. 인하 기대는 이들에게 이자비용 감소라는 실질 호재. 게다가 포지션이 가벼워 새 자금이 들어올 빈자리도 있었다 — 대형주와 반대 조건이라 평균보다 강하게 반응.</p>
+    <span class="al g">응용</span><p><b>러셀 &gt; 나스닥 유지 = 랠리가 시장 전체로 "확산" 중</b>이라는 신호. 뒤집히면 랠리가 소수 대형주로 좁아진다는 경고.</p></div>
+  </details>
+
+  <details class="acc"><summary><span class="car">▶</span><span class="an">{{ASSET_3_NAME}}</span><span class="achip ok">{{ASSET_MATCH_LABEL}}</span><span class="av" style="color:var(--down)">{{ASSET_3_MOVE}}<small>{{ASSET_3_NOTE}}</small></span></summary>
+    <div class="abody"><span class="al">왜 움직였나</span><p>2년물은 "향후 2년 정책금리의 평균 기대치"에 가장 가깝게 움직이는 금리다. 인하 확률이 68→84%로 뛰자 그 기대가 즉시 가격에 반영됐다. 모든 자산 중 <b>이번 재료의 가장 순수한 온도계</b>.</p>
+    <span class="al g">응용</span><p><b>3.81%가 이 랠리의 생명선.</b> 이 위로 되돌아가면(= 인하 기대 후퇴) 주가 반응도 되돌아갈 가능성이 높다. 알림을 걸어둘 단 하나의 수치.</p></div>
+  </details>
+
+  <details class="acc"><summary><span class="car">▶</span><span class="an">{{ASSET_4_NAME}}</span><span class="achip ok">{{ASSET_MATCH_LABEL}}</span><span class="av" style="color:var(--down)">{{ASSET_4_MOVE}}<small>{{ASSET_4_NOTE}}</small></span></summary>
+    <div class="abody"><span class="al">왜 움직였나</span><p>10년물 = 정책 기대 + <b>인플레이션 보상(프리미엄)</b>. 물가 전망이 내려가면 채권 투자자가 요구하는 인플레 보상도 줄어 금리가 하락. 2년물보다 덜 내린 건 장기엔 재정적자·국채 공급 부담이 남아 있어서다.</p>
+    <span class="al g">응용</span><p>10년물은 주택담보·회사채 금리의 기준. <b>4.0% 안착 여부가 기본 시나리오의 관찰 포인트.</b></p></div>
+  </details>
+
+  <details class="acc"><summary><span class="car">▶</span><span class="an">{{ASSET_5_NAME}}</span><span class="achip ok">{{ASSET_MATCH_LABEL}}</span><span class="av" style="color:var(--down)">{{ASSET_5_MOVE}}</span></summary>
+    <div class="abody"><span class="al">왜 움직였나 — 구체 논리</span><p>돈은 국경을 넘어 <b>이자를 더 주는 통화</b>로 흐른다. 그 수요의 사슬: ① 미국 금리 기대 하락 → 미국 국채·예금의 이자 매력 감소 ② 미국–유럽·일본의 <b>금리 차가 좁혀짐</b> → "달러를 사서 이자 차익을 먹던" 글로벌 자금(캐리 트레이드)이 달러를 팔고 청산 ③ 달러를 사려는 수요 자체가 줄어 가격(환율) 하락. 즉 "금리 인하 = 달러가 주는 이자 쿠폰이 작아진다 = 달러 보유 유인 감소"다.</p>
+    <span class="al g">응용</span><p>달러 약세는 신흥국·원자재·금에 호재로 연결되는 2차 파급의 시작점. 지속 여부는 <b>미–독 2년물 금리차</b>가 계속 좁혀지는지로 추적. 한국 투자자에겐 원화 환산 수익률 이슈(14번 참고).</p></div>
+  </details>
+
+  <details class="acc"><summary><span class="car">▶</span><span class="an">{{ASSET_6_NAME}}</span><span class="achip ok">{{ASSET_MATCH_LABEL}}</span><span class="av" style="color:var(--up)">{{ASSET_6_MOVE}}</span></summary>
+    <div class="abody"><span class="al">왜 움직였나</span><p>금은 이자가 없는 자산이라 <b>"이자를 포기하는 비용"(실질금리)이 금값의 중력</b>이다. 금리 기대 하락으로 그 비용이 줄었고, 동시에 금은 달러로 표시되니 달러 약세만큼 다른 통화 보유자에겐 싸져서 수요 증가 — 두 엔진이 동시에 켜졌다.</p>
+    <span class="al g">응용</span><p>금이 주식과 같이 오르는 날 = 시장이 "인하"를 사는 날. 금만 오르고 주식이 빠지기 시작하면 "침체"를 사기 시작했다는 신호로 전환.</p></div>
+  </details>
+
+  <details class="acc"><summary><span class="car">▶</span><span class="an">{{ASSET_7_NAME}}</span><span class="achip ok">{{ASSET_MATCH_LABEL}}</span><span class="av" style="color:var(--up)">{{ASSET_7_MOVE}}<small>{{ASSET_7_NOTE}}</small></span></summary>
+    <div class="abody"><span class="al">왜 움직였나</span><p>비트코인은 현금흐름이 없어 밸류에이션 닻이 없는 대신 <b>유동성 기대에 가장 민감한 자산</b>. 금리 인하 = 돈이 풀린다는 기대 = 위험자산 사슬의 맨 끝(코인)까지 자금이 미친다는 베팅이다. 24시간 거래라 반응도 가장 빠르다.</p>
+    <span class="al g">응용</span><p>비트코인이 주말·야간에 먼저 꺾이면, 월요일 주식시장의 리스크오프를 미리 보여주는 선행 온도계 역할을 할 때가 있다.</p></div>
+  </details>
+
+  <details class="acc"><summary><span class="car">▶</span><span class="an">{{ASSET_8_NAME}}</span><span class="achip diff">{{ASSET_8_CHIP}}</span><span class="av" style="color:var(--down)">{{ASSET_8_MOVE}}<small>{{ASSET_8_NOTE}}</small></span></summary>
+    <div class="abody"><span class="al">왜 움직였나</span><p>VIX는 옵션 가격에서 역산한 "향후 한 달 예상 출렁임". 불확실성(CPI)이 해소되니 하락했지만, <b>유사일 평균만큼 안 내려갔고 장중 저점에서 되올라왔다.</b></p>
+    <span class="al">이 어긋남이 말하는 것</span><p>주식·채권·달러가 전부 "안심"을 말하는데 옵션시장만 덜 안심 — <b>7/17 옵션만기와 7/21 국채입찰이라는 다음 이벤트를 옵션시장이 먼저 헤지하고 있다</b>는 해석이 유력. 오늘 표에서 유일하게 어긋난 자산이라 가장 중요한 단서다. <span class="tag">추론</span></p>
+    <span class="al g">응용</span><p>호재일에 VIX가 15를 다시 넘으면 약세 시나리오(20%)의 조기 경보로 간주.</p></div>
+  </details>
+
+  <div class="easy"><span class="lb">이 목록 쓰는 법</span>① <b>정합성 체크</b>: 자산들이 같은 스토리("금리 내려간다")를 말하는지 — 하나라도 어긋나면 그게 가장 중요한 단서(오늘은 VIX). ② <b>강도 체크</b>: 평균 대비 약한 곳(대형주)과 강한 곳(중소형주)이 갈린 것 자체가 순환의 신호. ③ <b>내일부터는 원인 자산(2년물)을 본다</b> — 결과(주가)만 보면 반전을 하루 늦게 안다.</div>
+  <p style="font-size:14px;margin-top:10px"><b>반응 귀속 판정:</b> 실업수당청구도 같은 시각 발표됐지만 서프라이즈가 작고(z +0.6) 방향도 같아 주도권은 CPI로 판정. 두 지표가 <b>반대 방향</b>이었다면 채권과 주식이 따로 노는 반응이 나오며, 그때는 자산별로 어느 지표를 따라갔는지 분리 해석한다. <span class="tag">추론</span></p>
+</section>
+
+<!-- 07 -->
+<section>
+  <div class="shead"><span class="snum">07</span><h2>{{SECTION_7_TITLE}}</h2></div>
+  <div class="keyline">{{FED_KEYLINE}}</div>
+  <div class="card">
+    <div class="wrow"><span class="wk">{{FED_WEIGHT_1_NAME}}</span><div class="wbar"><i class="hi" style="width:45%"></i></div><span class="wv">{{FED_WEIGHT_1_VALUE}}</span></div>
+    <div class="wrow"><span class="wk">{{FED_WEIGHT_2_NAME}}</span><div class="wbar"><i style="width:35%"></i></div><span class="wv">{{FED_WEIGHT_2_VALUE}}</span></div>
+    <div class="wrow"><span class="wk">{{FED_WEIGHT_3_NAME}}</span><div class="wbar"><i style="width:20%"></i></div><span class="wv">{{FED_WEIGHT_3_VALUE}}</span></div>
+    <p style="font-size:14px;margin-top:10px">{{FED_WEIGHT_NOTE}} <span class="tag">추론</span></p>
+    <div class="srcs">
+      <a href="https://www.federalreserve.gov/newsevents/pressreleases.htm" target="_blank" rel="noopener">FOMC 성명서 원문 ↗</a>
+      <a href="https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm" target="_blank" rel="noopener">점도표·경제전망(SEP) ↗</a>
+      <a href="https://www.federalreserve.gov/newsevents/speeches.htm" target="_blank" rel="noopener">연준 위원 발언 목록 ↗</a>
+      <a href="https://www.cmegroup.com/markets/interest-rates/cme-fedwatch-tool.html" target="_blank" rel="noopener">CME FedWatch (인하 확률) ↗</a>
+    </div>
+  </div>
+  {{AI_SUMMARY_HTML}}
+</section>
+
+<!-- 08 -->
+<section>
+  <div class="shead"><span class="snum">08</span><h2>{{SECTION_8_TITLE}}</h2></div>
+  <div class="keyline">{{FLOW_KEYLINE}}</div>
+  <div class="flowwrap">
+    <div class="fcol out">
+      <div class="ft">돈이 빠질 유인이 커진 곳</div>
+      <div class="fitem" style="border-top:0">{{FLOW_OUT_1_NAME}}<small>{{FLOW_OUT_1_NOTE}}</small></div>
+      <div class="fitem">{{FLOW_OUT_2_NAME}}<small>{{FLOW_OUT_2_NOTE}}</small></div>
+    </div>
+    <div class="farr">→</div>
+    <div class="fcol in">
+      <div class="ft">돈이 들어갈 유인이 커진 곳</div>
+      <div class="fitem" style="border-top:0">{{FLOW_IN_1_NAME}}<small>{{FLOW_IN_1_NOTE}}</small></div>
+      <div class="fitem">{{FLOW_IN_2_NAME}}<small>{{FLOW_IN_2_NOTE}}</small></div>
+      <div class="fitem">{{FLOW_IN_3_NAME}}<small>{{FLOW_IN_3_NOTE}}</small></div>
+    </div>
+  </div>
+  <div class="easy"><span class="lb">쉽게 말하면</span>{{FLOW_EASY_TEXT}}</div>
+  <div class="sowhat" style="border-top:0;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 15px;margin-top:10px"><span class="lb">개인이 확인하는 법</span>이 가설이 실제로 진행되는지는 공개 데이터로 추적 가능: ① <b>매주 금요일 CFTC COT 보고서</b>에서 러셀·국채 투기 포지션 증가 여부 ② <b>러셀2000 ÷ 나스닥 상대 강도</b>가 오르는지 ③ 장기채 ETF(TLT류) 가격 추세. 셋 중 둘이 꺾이면 이 순환 가설은 폐기. <span class="tag">추론</span> <a class="flink" href="https://www.cftc.gov/MarketReports/CommitmentsofTraders/index.htm" target="_blank" rel="noopener" style="font-size:12px">CFTC COT 원본↗</a></div>
+  <p style="font-size:14px;margin-top:10px"><b>반대 논거도 있다:</b> 금리 하락이 "경기 둔화 때문"으로 재해석되는 순간 이 순환은 멈추고, 돈은 오히려 대형주·현금으로 되돌아간다. 8월 초 고용보고서가 이 갈림길. <span class="tag">추론</span></p>
+</section>
+
+<!-- 09 -->
+<section>
+  <div class="shead"><span class="snum">09</span><h2>{{SECTION_9_TITLE}}</h2></div>
+  <div class="contra">
+    <span class="lb">CONTRARIAN VIEW</span>
+    <p>{{CONTRARIAN_PREFIX}} <b>{{CONTRARIAN_BOLD_1}}</b>{{CONTRARIAN_MIDDLE}} <b>{{CONTRARIAN_BOLD_2}}</b>{{CONTRARIAN_SUFFIX_PREFIX}} <b>{{CONTRARIAN_BOLD_3}}</b>{{CONTRARIAN_SUFFIX}} <span class="tag">추론</span></p>
+  </div>
+  <div class="easy"><span class="lb">쉽게 말하면</span>{{CONTRARIAN_EASY_TEXT}}</div>
+  <div class="sowhat" style="background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 15px;margin-top:10px"><span class="lb">이 관점 검증법</span>3일 안에 판가름 난다. <b>7/16 PPI 발표 때</b> — ① 2년물이 오르는데 나스닥도 같이 밀리면: 이 관점이 맞은 것(랠리가 금리에 종속). ② 2년물이 올라도 나스닥이 버티면: 이 관점이 틀린 것(랠리에 금리 외 동력이 있음 — 그게 더 강세 신호). 어느 쪽이든 다음 리포트 성적표에 기록된다.</div>
+</section>
+
+<!-- 10 -->
+<section>
+  <div class="shead"><span class="snum">10</span><h2>{{SECTION_10_TITLE}}</h2></div>
+  <div class="myth"><span class="no">오해 1</span>
+    <div class="q">{{MYTH_1_QUESTION}}</div>
+    <div class="a">{{MYTH_1_ANSWER_PREFIX}} <b>{{MYTH_1_ANSWER_BOLD}}</b>{{MYTH_1_ANSWER_SUFFIX}}</div>
+    <div class="case"><span class="clb">실제 사례</span>{{MYTH_1_CASE}}</div>
+  </div>
+  <div class="myth"><span class="no">오해 2</span>
+    <div class="q">{{MYTH_2_QUESTION}}</div>
+    <div class="a">{{MYTH_2_ANSWER_PREFIX}} <b>{{MYTH_2_ANSWER_BOLD}}</b>{{MYTH_2_ANSWER_SUFFIX}}</div>
+    <div class="case"><span class="clb">실제 사례</span>{{MYTH_2_CASE}}</div>
+  </div>
+  <div class="myth"><span class="no">오해 3</span>
+    <div class="q">{{MYTH_3_QUESTION}}</div>
+    <div class="a">{{MYTH_3_ANSWER_PREFIX}} <b>{{MYTH_3_ANSWER_BOLD}}</b>{{MYTH_3_ANSWER_SUFFIX}}</div>
+    <div class="case"><span class="clb">실제 사례</span>{{MYTH_3_CASE}}</div>
+  </div>
+</section>
+
+<!-- 11 -->
+<section>
+  <div class="shead"><span class="snum">11</span><h2>{{SECTION_11_TITLE}}</h2></div>
+  <div class="keyline">{{SIMILARITY_KEYLINE}}</div>
+  <div class="acchint">{{SIMILARITY_HINT}}</div>
+  <div class="sim">
+    <details class="simacc"><summary><div class="sim-row"><span class="pct">{{CASE_1_SIMILARITY}}</span><div class="cs">{{CASE_1_TITLE}}<small>{{CASE_1_SUBTITLE}}</small></div><div class="r1m pos">{{CASE_1_RETURN}}<small>{{CASE_1_RETURN_LABEL}}</small></div></div></summary>
+      <div class="sbody">
+        <div class="srow"><span class="sk">배경</span><span>직전 3개월간 10년물이 5%를 터치하며 시장이 금리 공포에 눌려 있었고, 10월 조정으로 <b>포지션이 거의 비워진 상태</b>였다. 그때 CPI가 예상을 크게 하회.</span></div>
+        <div class="srow"><span class="sk">전개</span><span>발표일 +1.9% 급등 → 인하 기대가 "가능성"에서 "기정사실"로 바뀌며 <b>연말까지 9주 중 8주 상승.</b> 1개월 +4.4%, 3개월 +11%.</span></div>
+        <div class="srow"><span class="sk">교훈</span><span>피벗 기대의 "점화 순간" + 빈 포지션의 조합이 가장 폭발력이 크다.</span></div>
+        <div class="srow"><span class="sk">차이</span><span>지금은 포지션이 이미 차 있다 — 같은 재료라도 연료 탱크 상태가 다르다.</span></div>
+      </div>
+    </details>
+    <details class="simacc"><summary><div class="sim-row"><span class="pct">{{CASE_2_SIMILARITY}}</span><div class="cs">{{CASE_2_TITLE}}<small>{{CASE_2_SUBTITLE_PREFIX}} <b>{{CASE_2_SUBTITLE_BOLD}}</b></small></div><div class="r1m pos">{{CASE_2_RETURN}}<small>{{CASE_2_RETURN_LABEL}}</small></div></div></summary>
+      <div class="sbody">
+        <div class="srow"><span class="sk">배경</span><span>AI 대형주가 사상 최고가를 연일 갈아치우며 <b>쏠림이 극심</b>하던 시점에 좋은 CPI가 나왔다.</span></div>
+        <div class="srow"><span class="sk">전개</span><span>호재인데 <b>나스닥은 당일 하락</b> — 대형주 차익실현 자금이 러셀2000으로 이동하며 중소형주만 +3%대 폭등(역사적 수준의 순환). 이후 8월 초 외부 충격(엔캐리 청산)으로 급락을 겪고 회복, 1개월 +1.6%.</span></div>
+        <div class="srow"><span class="sk">교훈</span><span>쏠림 속 호재는 "지수 상승"이 아니라 <b>"자금 이동"</b>으로 나타날 수 있다. 좋은 지표 = 내 종목 상승이 아니다.</span></div>
+        <div class="srow"><span class="sk">공통점</span><span>롱 쏠림 + 피벗기대 + 러셀 강세 — 셋 다 이번과 같다. 이번에도 "지수보다 순환"이 핵심일 가능성.</span></div>
+      </div>
+    </details>
+    <details class="simacc"><summary><div class="sim-row"><span class="pct">{{CASE_3_SIMILARITY}}</span><div class="cs">{{CASE_3_TITLE}}<small>{{CASE_3_SUBTITLE}}</small></div><div class="r1m pos">{{CASE_3_RETURN}}<small>{{CASE_3_RETURN_LABEL}}</small></div></div></summary>
+      <div class="sbody">
+        <div class="srow"><span class="sk">배경</span><span>재정·국채 수급 불안이 시장의 부차 걱정으로 깔려 있던 시점의 대형 서프라이즈.</span></div>
+        <div class="srow"><span class="sk">전개</span><span>발표일 +1.3% 후 <b>첫 주는 20년물 입찰 부진에 발목이 잡혀 횡보~소폭 하락</b>, 둘째 주부터 재상승해 1개월 +2.8%.</span></div>
+        <div class="srow"><span class="sk">교훈</span><span>지표 호재가 국채 수급 이벤트에 <b>일시적으로 덮일 수 있다</b> — 이번에도 7/21 입찰이 같은 자리에 있다(13번 리스크 참고).</span></div>
+      </div>
+    </details>
+    <details class="simacc"><summary><div class="sim-row"><span class="pct">{{CASE_4_SIMILARITY}}</span><div class="cs">{{CASE_4_TITLE}}<small>{{CASE_4_SUBTITLE}}</small></div><div class="r1m neg">{{CASE_4_RETURN}}<small>{{CASE_4_RETURN_LABEL}}</small></div></div></summary>
+      <div class="sbody">
+        <div class="srow"><span class="sk">배경</span><span>사상 최고가권 + 낙관 만연 + 롱 쏠림에서 나온 "무난히 좋은" 지표.</span></div>
+        <div class="srow"><span class="sk">전개</span><span>당일 반짝 상승으로 신고가를 찍은 뒤 <b>한 달간 횡보~소폭 하락(−0.8%).</b> 나쁜 일이 생겨서가 아니라, 살 사람이 없어서 못 오른 케이스.</span></div>
+        <div class="srow"><span class="sk">교훈</span><span>5건 중 유일한 마이너스가 <b>롱 쏠림 + 이미 고점권</b> 조합에서 나왔다 — 이번의 하방 시나리오가 참고할 원형.</span></div>
+      </div>
+    </details>
+    <details class="simacc"><summary><div class="sim-row"><span class="pct">{{CASE_5_SIMILARITY}}</span><div class="cs">{{CASE_5_TITLE}}<small>{{CASE_5_SUBTITLE}}</small></div><div class="r1m pos">{{CASE_5_RETURN}}<small>{{CASE_5_RETURN_LABEL}}</small></div></div></summary>
+      <div class="sbody">
+        <div class="srow"><span class="sk">배경</span><span>연초 은행 불안의 여파로 <b>약세론이 대세, 하락 베팅(숏)이 과밀</b>하던 시점.</span></div>
+        <div class="srow"><span class="sk">전개</span><span>좋은 CPI가 나오자 하락에 베팅했던 자금이 손실을 줄이려 <b>급히 되사면서(숏커버) 상승이 상승을 부르는 폭발적 랠리.</b> 1개월 +3.1%.</span></div>
+        <div class="srow"><span class="sk">교훈</span><span>포지셔닝의 "반대" 효과 — 같은 호재도 숏 쏠림에선 증폭되고, 지금 같은 롱 쏠림에선 감쇠된다. 이 다섯 사례를 관통하는 단 하나의 변수가 포지셔닝이다.</span></div>
+      </div>
+    </details>
+    <div class="sim-row sim-avg"><span class="pct"></span><div class="cs">{{CASE_AVG_LABEL}}</div><div class="r1m pos">{{CASE_AVG_RETURN}}<small>{{CASE_AVG_DETAIL}}</small></div></div>
+  </div>
+  <p style="font-size:14px;margin-top:10px"><b>{{SIMILARITY_SUMMARY_BOLD}}</b> — {{SIMILARITY_SUMMARY_TEXT}} <span class="tag">사실+추론</span></p>
+</section>
+
+<!-- 12 -->
+<section>
+  <div class="shead"><span class="snum">12</span><h2>{{SECTION_12_TITLE}}</h2></div>
+  <div class="scn">
+    <div class="scn-h"><span class="n">{{SCENARIO_1_NAME}}</span><span class="p">{{SCENARIO_1_PROB}}</span></div>
+    <div class="bar"><i style="width:55%;background:var(--dim)"></i></div>
+    <dl>
+      <dt>전개</dt><dd>{{SCENARIO_1_PATH}}</dd>
+      <dt>수혜</dt><dd>{{SCENARIO_1_BENEFICIARIES}}</dd>
+      <dt>폐기되면</dt><dd><b>{{SCENARIO_1_INVALIDATION_BOLD}}</b> {{SCENARIO_1_INVALIDATION_TEXT}}</dd>
+    </dl>
+  </div>
+  <div class="scn">
+    <div class="scn-h"><span class="n" style="color:var(--up)">{{SCENARIO_2_NAME}}</span><span class="p" style="color:var(--up)">{{SCENARIO_2_PROB}}</span></div>
+    <div class="bar"><i style="width:25%;background:var(--up)"></i></div>
+    <dl>
+      <dt>트리거</dt><dd><b>{{SCENARIO_2_TRIGGER_BOLD}}</b> {{SCENARIO_2_TRIGGER_TEXT}}</dd>
+      <dt>수혜</dt><dd>{{SCENARIO_2_BENEFICIARIES}}</dd>
+      <dt>폐기되면</dt><dd>{{SCENARIO_2_INVALIDATION}}</dd>
+    </dl>
+  </div>
+  <div class="scn">
+    <div class="scn-h"><span class="n" style="color:var(--down)">{{SCENARIO_3_NAME}}</span><span class="p" style="color:var(--down)">{{SCENARIO_3_PROB}}</span></div>
+    <div class="bar"><i style="width:20%;background:var(--down)"></i></div>
+    <dl>
+      <dt>트리거</dt><dd><b>{{SCENARIO_3_TRIGGER_BOLD}}</b> {{SCENARIO_3_TRIGGER_TEXT}}</dd>
+      <dt>회피</dt><dd>{{SCENARIO_3_AVOID}}</dd>
+      <dt>폐기되면</dt><dd>{{SCENARIO_3_INVALIDATION}}</dd>
+    </dl>
+  </div>
+</section>
+
+<!-- 13 -->
+<section>
+  <div class="shead"><span class="snum">13</span><h2>{{SECTION_13_TITLE}}</h2></div>
+  <div class="keyline dn">{{RISKS_KEYLINE}}</div>
+  <ul class="risk">
+    <li><span class="rp">{{RISK_1_DATE}}</span><span><b>{{RISK_1_TITLE}}</b> {{RISK_1_TEXT}}</span></li>
+    <li><span class="rp">{{RISK_2_DATE}}</span><span><b>{{RISK_2_TITLE}}</b> {{RISK_2_TEXT}}</span></li>
+    <li><span class="rp">{{RISK_3_DATE}}</span><span><b>{{RISK_3_TITLE}}</b> {{RISK_3_TEXT}}</span></li>
+    <li><span class="rp">{{RISK_4_DATE}}</span><span><b>{{RISK_4_TITLE}}</b> {{RISK_4_TEXT}}</span></li>
+  </ul>
+</section>
+
+<!-- 14 -->
+<section>
+  <div class="shead"><span class="snum">14</span><h2>{{SECTION_14_TITLE_PREFIX}} <span class="tag" style="font-size:11px">{{SECTION_14_TAG}}</span></h2></div>
+  <div class="keyline">{{POSITION_GUIDE_KEYLINE}}</div>
+  <div class="pos-card">
+    <span class="who h">{{POSITION_1_TITLE}}</span>
+    <p>{{POSITION_1_TEXT_PREFIX}} <b>{{POSITION_1_TEXT_BOLD}}</b>{{POSITION_1_TEXT_SUFFIX}}</p>
+  </div>
+  <div class="pos-card">
+    <span class="who c">{{POSITION_2_TITLE}}</span>
+    <p>{{POSITION_2_TEXT_PREFIX}} <b>{{POSITION_2_TEXT_BOLD}}</b> {{POSITION_2_TEXT_SUFFIX}}</p>
+  </div>
+  <div class="pos-card">
+    <span class="who n">{{POSITION_3_TITLE}}</span>
+    <p>{{POSITION_3_TEXT_PREFIX}} <b>{{POSITION_3_TEXT_BOLD}}</b>{{POSITION_3_TEXT_SUFFIX}}</p>
+  </div>
+  <div class="pos-card">
+    <span class="who c" style="color:var(--down)">{{POSITION_4_TITLE}}</span>
+    <p>{{POSITION_4_TEXT_PREFIX}} <b>{{POSITION_4_TEXT_BOLD_1}}</b>{{POSITION_4_TEXT_MIDDLE}} <b>{{POSITION_4_TEXT_BOLD_2}}</b> <span class="tag">사실+추론</span></p>
+  </div>
+  <ul class="check" style="margin-top:14px">
+    <li><b>공통 확인 ①</b> 2년물이 3.81% 아래를 지키는가 — 무너지면 인하 기대 후퇴 신호</li>
+    <li><b>공통 확인 ②</b> 러셀2000이 나스닥을 계속 이기는가 — 피벗 랠리 "확산"의 리트머스</li>
+    <li><b>공통 확인 ③</b> 목 PPI(예상 +0.2%) · 금 미시간 기대인플레(직전 3.0%) — 하나라도 상회 시 기본 시나리오 확률 하향</li>
+    <li class="warn"><b>경고</b> 발표 다음 날 갭상승 추격 매수 — 유사 사례에서 반복된 단기 고점 패턴</li>
+  </ul>
+</section>
+
+<!-- 15 -->
+<section>
+  <div class="shead"><span class="snum">15</span><h2>{{SECTION_15_TITLE}}</h2></div>
+  <div class="lesson">
+    <b>{{LESSON_FORMULA}}</b><br>
+    {{LESSON_TEXT}}
+  </div>
+</section>
+
+<!-- 16 -->
+<section>
+  <div class="shead"><span class="snum">16</span><h2>{{SECTION_16_TITLE}}</h2></div>
+  <div class="track">
+    <div class="trow"><span>{{TRACK_1_TEXT}}</span><span class="hit n">{{TRACK_1_STATUS}}</span></div>
+    <div class="trow"><span>{{TRACK_2_TEXT}}</span><span class="hit o">{{TRACK_2_STATUS}}</span></div>
+    <div class="trow"><span>{{TRACK_3_TEXT}}</span><span class="hit x">{{TRACK_3_STATUS}}</span></div>
+    <div class="trow"><span>{{TRACK_RATE_LABEL}}</span><span class="rate">{{TRACK_RATE_VALUE}}</span></div>
+  </div>
+  <p style="font-size:13.5px;color:var(--dim);margin-top:8px">{{TRACK_NOTE}}</p>
+</section>
+
+<!-- 17 -->
+<section>
+  <div class="shead"><span class="snum">17</span><h2>{{SECTION_17_TITLE}}</h2></div>
+  <ul class="next">
+    <li><span class="d">{{CHECKPOINT_1_DATE}}</span><span>{{CHECKPOINT_1_TEXT}}</span><span class="s">{{CHECKPOINT_1_IMPORTANCE}}</span></li>
+    <li><span class="d">{{CHECKPOINT_2_DATE}}</span><span>{{CHECKPOINT_2_TEXT}}</span><span class="s">{{CHECKPOINT_2_IMPORTANCE}}</span></li>
+    <li><span class="d">{{CHECKPOINT_3_DATE}}</span><span>{{CHECKPOINT_3_TEXT}}</span><span class="s">{{CHECKPOINT_3_IMPORTANCE}}</span></li>
+    <li><span class="d">{{CHECKPOINT_4_DATE}}</span><span>{{CHECKPOINT_4_TEXT}}</span><span class="s">{{CHECKPOINT_4_IMPORTANCE}}</span></li>
+    <li><span class="d">{{CHECKPOINT_5_DATE}}</span><span>{{CHECKPOINT_5_TEXT}}</span><span class="s">{{CHECKPOINT_5_IMPORTANCE}}</span></li>
+  </ul>
+</section>
+
+<div class="disclaimer">
+  {{DISCLAIMER_PREFIX}} <b>{{DISCLAIMER_BOLD}}</b>{{DISCLAIMER_SUFFIX}}
+</div>
+
+</div>
+</body>
+</html>
