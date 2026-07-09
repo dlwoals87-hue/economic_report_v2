@@ -1,43 +1,145 @@
 {
   "meta": {
     "report_title": "6월 CPI 해석 리포트 — 매크로 브리핑 (샘플 MVP)",
-    "report_datetime": "2026-07-09 21:30 발표 · 미국 노동통계국(BLS) · 발표 42분 후 자동 생성",
+    "report_datetime_display": "2026-07-09 21:30 발표 · 미국 노동통계국(BLS) · 발표 42분 후 자동 생성",
     "brand_name": "매크로 브리핑",
+    "indicator_type": "CPI",
     "indicator_name": "CPI",
+    "indicator_display_name": "미국 소비자물가지수",
+    "country": "US",
+    "release_datetime_kst": "2026-07-09 21:30",
     "is_sample": true,
     "language": "ko",
     "sample_badge": "SAMPLE · 가상 데이터",
     "multi_event_note": "⧉ 21:30 동시 발표 2건 — 반응이 섞이므로 하나의 리포트로 통합 분석합니다"
   },
   "event": {
-    "actual": "2.8%",
-    "expected": "2.9%",
-    "previous": "3.0%",
-    "surprise_direction": "downside",
-    "unit": "%",
-    "sublabel": "전체 물가",
-    "surprise_delta": "예상 −0.1%p",
+    "headline": {
+      "name": "Headline CPI",
+      "label": "전체 물가",
+      "actual": "2.8%",
+      "expected": "2.9%",
+      "previous": "3.0%",
+      "unit": "%",
+      "frequency": "YoY",
+      "direction_good_when": "lower"
+    },
+    "core": {
+      "name": "근원 CPI",
+      "label": "에너지·식품 제외",
+      "actual": "3.0%",
+      "expected": "3.1%",
+      "previous": "3.2%",
+      "unit": "%",
+      "frequency": "YoY",
+      "surprise_delta": "예상 −0.1%p",
+      "required": true
+    },
+    "sub_metrics": [
+      {
+        "key": "shelter",
+        "label": "주거 (집세·월세)",
+        "actual": "+0.22%",
+        "expected": "",
+        "previous": "전월 +0.35%",
+        "unit": "%",
+        "importance": "high",
+        "description": "CPI에서 주거비는 서비스 물가 경직성을 보는 핵심 세부항목",
+        "stack_label": "주거 36%",
+        "weight_label": "CPI의 36% · 최대 항목",
+        "direction_label": "▼ 3개월 연속 둔화",
+        "verdict": "우호 · 뚜렷한 둔화"
+      },
+      {
+        "key": "supercore",
+        "label": "근원 서비스 (주거 제외)",
+        "actual": "+0.18%",
+        "expected": "",
+        "previous": "전월 +0.31%",
+        "unit": "%",
+        "importance": "high",
+        "description": "주거비를 제외한 근원 서비스 물가 흐름",
+        "stack_label": "서비스 25%",
+        "weight_label": "일명 \"슈퍼코어\"",
+        "direction_label": "▼ 둔화",
+        "verdict": "우호"
+      },
+      {
+        "key": "core",
+        "label": "근원 CPI (에너지·식품 제외)",
+        "actual": "3.0%",
+        "expected": "3.1%",
+        "previous": "예상 3.0% · 전월 3.1%",
+        "unit": "%",
+        "importance": "high",
+        "description": "에너지와 식품을 제외한 기조 물가 흐름",
+        "stack_label": "상품 19%",
+        "weight_label": "연준의 기준",
+        "direction_label": "▼",
+        "verdict": "우호 · 예상 하회"
+      },
+      {
+        "key": "goods",
+        "label": "상품 (중고차 등)",
+        "actual": "−0.6%",
+        "expected": "",
+        "previous": "하락 지속",
+        "unit": "%",
+        "importance": "medium",
+        "description": "상품 가격과 공급망 압력의 변화",
+        "stack_label": "식품 13%",
+        "weight_label": "19%",
+        "direction_label": "▼",
+        "verdict": "우호"
+      },
+      {
+        "key": "food",
+        "label": "식품",
+        "actual": "+0.3%",
+        "expected": "",
+        "previous": "전월 +0.2%",
+        "unit": "%",
+        "importance": "medium",
+        "description": "가계 체감물가와 소비심리에 영향을 주는 항목",
+        "stack_label": "7%",
+        "weight_label": "13% · 체감물가",
+        "direction_label": "▲ 소폭 상승",
+        "verdict": "소폭 비우호"
+      }
+    ],
+    "surprise": {
+      "direction": "below_expected",
+      "label": "예상 소폭 하회",
+      "display_label": "Mild Surprise (z −1.1)",
+      "actual_vs_expected": "예상 −0.1%p",
+      "market_meaning": "물가 둔화 기대와 금리 인하 기대를 강화"
+    },
+    "expectations": {
+      "before_48h": "3.0%",
+      "before_24h": "2.9%",
+      "before_24h_label": "24시간 전",
+      "path_prefix": "시장 기대의 이동 경로: 48시간 전",
+      "path_comment": "기대가 이미 내려오는 중이었는데도 그보다 더 낮았다. 순수 서프라이즈는 유효하다.",
+      "source_label": "기대치 출처:",
+      "source_text": "이코노미스트 설문 컨센서스(블룸버그·로이터 집계) + 인플레이션 스왑 시장 가격.",
+      "why_label": "왜 내려왔나:",
+      "why_text": "발표 전 주 유가 하락과 민간 임대료 지표(Zillow 등) 둔화가 확인되며 전문가들이 전망을 낮췄다."
+    },
+    "secondary_events": [
+      {
+        "name": "실업수당청구",
+        "label": "보조 · ★★★☆☆",
+        "title": "함께 발표 · 실업수당청구",
+        "actual": "23.4만",
+        "expected": "23.1만",
+        "summary": "소폭 악화, z +0.6. 같은 방향 재료(인하 기대 강화)라 주도권은 CPI로 판정"
+      }
+    ],
     "lead_event_label": "주도 지표 · ★★★★★",
     "table_labels": {
       "actual": "실제",
       "expected": "예상",
       "previous": "이전 (5월치)"
-    },
-    "core": {
-      "name": "근원 CPI",
-      "actual": "3.0%",
-      "expected": "3.1%",
-      "previous": "3.2%",
-      "sublabel": "에너지·식품 제외",
-      "surprise_delta": "예상 −0.1%p"
-    },
-    "secondary": {
-      "name": "실업수당청구",
-      "label": "보조 · ★★★☆☆",
-      "title": "함께 발표 · 실업수당청구",
-      "actual": "23.4만",
-      "expected": "23.1만",
-      "summary": "소폭 악화, z +0.6. 같은 방향 재료(인하 기대 강화)라 주도권은 CPI로 판정"
     }
   },
   "headline": {
@@ -72,7 +174,18 @@
     ]
   },
   "analysis": {
-    "summary_html": "<p style=\"margin-top:12px\">이 문장을 풀면 이렇다. 연준의 임무는 법으로 정해진 두 가지다(이중책무): <b>물가 안정</b>과 <b>최대 고용</b>. 보통은 둘이 반대 방향을 가리켜서 고민이 되는데 — 물가를 잡으려면 금리를 올려야 하고, 고용을 지키려면 내려야 하니까 — 지금은 드물게 <b>둘 다 \"내려라\"를 가리키기 시작했다.</b></p><p style=\"margin-top:10px\">① <b>고용 쪽:</b> 이미 식는 중이다. 금리를 높게 유지할수록 기업의 자금 부담이 커져 고용이 더 다친다 — 인하 찬성 논거. ② <b>물가 쪽:</b> 지금까지 유일한 반대 논거(\"아직 물가가 목표 위\")였는데, 이번 CPI 샘플가 그 논거를 약화시켰다. ③ 여기에 <b>실질금리 논리</b>가 얹힌다: 물가가 3.0→2.8%로 내리면 명목금리를 안 건드려도 \"물가를 뺀 실제 금리 부담\"은 오히려 올라간다. 즉 <b>연준이 가만히 있어도 긴축이 저절로 세지는 셈</b>이라, 물가 하락 자체가 인하 압력이 된다. 그래서 \"해도 되는 것\"이 \"안 하면 이상한 것\"으로 바뀐다는 표현을 쓴 것.</p><p style=\"margin-top:10px\"><b>그런데 왜 아직 확정이 아닌가:</b> 연준의 공식 물가 목표 지표는 CPI가 아니라 <b>PCE</b>(7/25 발표)이고, 고용 판단은 8월 초 고용보고서가 최신 데이터가 된다. 연준은 \"데이터 포인트 하나가 아니라 데이터 전체의 흐름으로 판단한다\"고 반복해서 말해왔다 — 지표 하나에 정책이 뒤집히면 시장이 지표마다 과민 반응하게 되기 때문. 그래서 이번 CPI 샘플는 인하의 \"확정\"이 아니라 <b>반대 논거의 제거</b>다. <span class=\"tag\">사실+추론</span></p>"
+    "summary_html": "<p style=\"margin-top:12px\">이 문장을 풀면 이렇다. 연준의 임무는 법으로 정해진 두 가지다(이중책무): <b>물가 안정</b>과 <b>최대 고용</b>. 보통은 둘이 반대 방향을 가리켜서 고민이 되는데 — 물가를 잡으려면 금리를 올려야 하고, 고용을 지키려면 내려야 하니까 — 지금은 드물게 <b>둘 다 \"내려라\"를 가리키기 시작했다.</b></p><p style=\"margin-top:10px\">① <b>고용 쪽:</b> 이미 식는 중이다. 금리를 높게 유지할수록 기업의 자금 부담이 커져 고용이 더 다친다 — 인하 찬성 논거. ② <b>물가 쪽:</b> 지금까지 유일한 반대 논거(\"아직 물가가 목표 위\")였는데, 이번 CPI 샘플가 그 논거를 약화시켰다. ③ 여기에 <b>실질금리 논리</b>가 얹힌다: 물가가 3.0→2.8%로 내리면 명목금리를 안 건드려도 \"물가를 뺀 실제 금리 부담\"은 오히려 올라간다. 즉 <b>연준이 가만히 있어도 긴축이 저절로 세지는 셈</b>이라, 물가 하락 자체가 인하 압력이 된다. 그래서 \"해도 되는 것\"이 \"안 하면 이상한 것\"으로 바뀐다는 표현을 쓴 것.</p><p style=\"margin-top:10px\"><b>그런데 왜 아직 확정이 아닌가:</b> 연준의 공식 물가 목표 지표는 CPI가 아니라 <b>PCE</b>(7/25 발표)이고, 고용 판단은 8월 초 고용보고서가 최신 데이터가 된다. 연준은 \"데이터 포인트 하나가 아니라 데이터 전체의 흐름으로 판단한다\"고 반복해서 말해왔다 — 지표 하나에 정책이 뒤집히면 시장이 지표마다 과민 반응하게 되기 때문. 그래서 이번 CPI 샘플는 인하의 \"확정\"이 아니라 <b>반대 논거의 제거</b>다. <span class=\"tag\">사실+추론</span></p>",
+    "indicator_anatomy": {
+      "keyline": "헤드라인 좋고 세부도 좋아야 진짜다. 이번엔 둘 다 같은 방향 — 발표 직후 반응이 뒤집힐 위험은 낮다.",
+      "legend_note": "주거 하나가 3분의 1 — 그래서 주거가 안 꺾이면 CPI는 못 내려온다",
+      "reinterpretation_risk": "✓ 재해석 리스크: 낮음 — 헤드라인·근원·주거·슈퍼코어가 모두 같은 방향"
+    },
+    "market_breadth": {
+      "summary": "소수 대형주가 아니라 시장 전체가 오른 날 — 랠리의 질은 양호"
+    },
+    "market_focus": {
+      "keyline": "시장의 1순위 관심사가 \"금리\"였기 때문에 이번 CPI에 크게 반응했다. 관심사가 다른 곳에 있었다면 같은 숫자에도 조용했을 것."
+    }
   },
   "assets_meta": {
     "accordion_hint": "각 자산을 누르면 상세 설명이 열립니다 ▸",
@@ -234,30 +347,9 @@
     }
   ],
   "flat_overrides": {
-    "ANATOMY_KEYLINE": "헤드라인 좋고 세부도 좋아야 진짜다. 이번엔 둘 다 같은 방향 — 발표 직후 반응이 뒤집힐 위험은 낮다.",
-    "BREADTH_ADVANCERS": "69%",
     "BREADTH_ADVANCERS_LABEL": "상승 종목",
-    "BREADTH_HIGHS": "311",
     "BREADTH_HIGHS_LABEL": "52주 신고가",
-    "BREADTH_LOWS": "24",
     "BREADTH_LOWS_LABEL": "52주 신저가",
-    "BREADTH_SUMMARY": "소수 대형주가 아니라 시장 전체가 오른 날 — 랠리의 질은 양호",
-    "CHAIN_1_NOTE": "물가 둔화 재확인",
-    "CHAIN_1_STAGE": "지표",
-    "CHAIN_1_TITLE": "CPI 2.6%, 예상 −0.2%p 하회",
-    "CHAIN_2_NOTE": "FedWatch, 발표 30분 내",
-    "CHAIN_2_STAGE": "금리 기대",
-    "CHAIN_2_TITLE": "9월 인하 확률 68% → 84%",
-    "CHAIN_3_NOTE": "정책 기대에 민감한 단기물이 먼저 반응",
-    "CHAIN_3_STAGE": "채권·달러",
-    "CHAIN_3_TITLE": "2년물 −11bp · 10년물 −9bp · 달러 −0.7%",
-    "CHAIN_4_NOTE": "금리↓ = 미래 이익의 현재가치↑",
-    "CHAIN_4_STAGE": "할인율",
-    "CHAIN_4_TITLE": "성장주 밸류에이션 부담 완화",
-    "CHAIN_5_NOTE": "금리에 눌려있던 중소형주가 가장 크게 반등",
-    "CHAIN_5_STAGE": "주식·코인",
-    "CHAIN_5_TITLE": "나스닥 +1.1% · 러셀2000 +1.6% · BTC +2.4%",
-    "CHAIN_KEYLINE": "발표 → 주가 사이엔 5개의 연결고리가 있다. 이번엔 다섯 개가 전부 교과서대로 작동했다.",
     "CHECKPOINT_1_DATE": "7/16",
     "CHECKPOINT_1_IMPORTANCE": "★★★☆☆",
     "CHECKPOINT_1_TEXT": "6월 PPI — 근원 상회 시 오늘 해석 약화",
@@ -273,41 +365,6 @@
     "CHECKPOINT_5_DATE": "7/29",
     "CHECKPOINT_5_IMPORTANCE": "★★★★★",
     "CHECKPOINT_5_TEXT": "FOMC — \"인플레 진전\" 문구 변화 주시",
-    "COMPONENT_1_DIRECTION": "▼ 3개월 연속 둔화",
-    "COMPONENT_1_NAME": "주거 (집세·월세)",
-    "COMPONENT_1_PREVIOUS": "(전월 +0.35%)",
-    "COMPONENT_1_SHARE": "CPI의 36% · 최대 항목",
-    "COMPONENT_1_VALUE": "+0.22%",
-    "COMPONENT_1_VERDICT": "우호 · 뚜렷한 둔화",
-    "COMPONENT_2_DIRECTION": "▼ 둔화",
-    "COMPONENT_2_NAME": "근원 서비스 (주거 제외)",
-    "COMPONENT_2_PREVIOUS": "(전월 +0.31%)",
-    "COMPONENT_2_SHARE": "일명 \"슈퍼코어\"",
-    "COMPONENT_2_VALUE": "+0.18%",
-    "COMPONENT_2_VERDICT": "우호",
-    "COMPONENT_3_DIRECTION": "▼",
-    "COMPONENT_3_NAME": "근원 CPI (에너지·식품 제외)",
-    "COMPONENT_3_PREVIOUS": "(예상 3.0% · 전월 3.1%)",
-    "COMPONENT_3_SHARE": "연준의 기준",
-    "COMPONENT_3_VERDICT": "우호 · 예상 하회",
-    "COMPONENT_4_DIRECTION": "▼",
-    "COMPONENT_4_NAME": "상품 (중고차 등)",
-    "COMPONENT_4_PREVIOUS": "(하락 지속)",
-    "COMPONENT_4_SHARE": "19%",
-    "COMPONENT_4_VALUE": "−0.6%",
-    "COMPONENT_4_VERDICT": "우호",
-    "COMPONENT_5_DIRECTION": "▲ 소폭 상승",
-    "COMPONENT_5_NAME": "식품",
-    "COMPONENT_5_PREVIOUS": "(전월 +0.2%)",
-    "COMPONENT_5_SHARE": "13% · 체감물가",
-    "COMPONENT_5_VALUE": "+0.3%",
-    "COMPONENT_5_VERDICT": "소폭 비우호",
-    "COMPONENT_LEGEND_NOTE": "주거 하나가 3분의 1 — 그래서 주거가 안 꺾이면 CPI는 못 내려온다",
-    "COMPONENT_STACK_1": "주거 36%",
-    "COMPONENT_STACK_2": "서비스 25%",
-    "COMPONENT_STACK_3": "상품 19%",
-    "COMPONENT_STACK_4": "식품 13%",
-    "COMPONENT_STACK_5": "7%",
     "CONFIDENCE_TITLE": "왜 72점이고 신뢰도는 \"보통\"인가",
     "CONF_1_LABEL": "지표–시장반응 일치도",
     "CONF_2_LABEL": "유동성 뒷받침",
@@ -340,15 +397,6 @@
     "EASY_SUMMARY_PREFIX": "물가가 식어서",
     "EASY_SUMMARY_SUFFIX": "입니다. ※ bp = 0.01%p. −11bp는 금리가 0.11%p 내렸다는 의미.",
     "ENERGY_LEGEND": "맨 오른쪽 7% = 에너지",
-    "EXPECTATION_24H": "2.9%",
-    "EXPECTATION_24H_LABEL": "24시간 전",
-    "EXPECTATION_48H": "3.0%",
-    "EXPECTATION_PATH_COMMENT": "기대가 이미 내려오는 중이었는데도 그보다 더 낮았다. 순수 서프라이즈는 유효하다.",
-    "EXPECTATION_PATH_PREFIX": "시장 기대의 이동 경로: 48시간 전",
-    "EXPECTATION_SOURCE_LABEL": "기대치 출처:",
-    "EXPECTATION_SOURCE_TEXT": "이코노미스트 설문 컨센서스(블룸버그·로이터 집계) + 인플레이션 스왑 시장 가격.",
-    "EXPECTATION_WHY_LABEL": "왜 내려왔나:",
-    "EXPECTATION_WHY_TEXT": "발표 전 주 유가 하락과 민간 임대료 지표(Zillow 등) 둔화가 확인되며 전문가들이 전망을 낮췄다.",
     "FED_KEYLINE": "지금 연준의 눈은 물가보다 고용에 45% 쏠려 있다. 이번 CPI는 \"인하해도 된다\"는 안전판을 깔아준 것.",
     "FED_WEIGHT_1_NAME": "고용",
     "FED_WEIGHT_1_VALUE": "45%",
@@ -383,7 +431,6 @@
     "LIQUIDITY_LABEL": "유동성 점수",
     "LIQUIDITY_SCORE": "82",
     "LIQUIDITY_STATUS": "↑↑ 최근 8주 최고",
-    "MARKET_FOCUS_KEYLINE": "시장의 1순위 관심사가 \"금리\"였기 때문에 이번 CPI에 크게 반응했다. 관심사가 다른 곳에 있었다면 같은 숫자에도 조용했을 것.",
     "MYTH_1_ANSWER_BOLD": "발표 다음 날이 단기 고점",
     "MYTH_1_ANSWER_PREFIX": "부분 선반영 + 롱 쏠림 상태의 호재는",
     "MYTH_1_ANSWER_SUFFIX": "이 된 사례가 유사 7건 중 4건. 재료의 힘은 이미 절반 소비됐다.",
@@ -399,8 +446,6 @@
     "MYTH_3_ANSWER_SUFFIX": "를 산다. 2.9%도 예상(3.0%)을 밑돌았고 3개월 연속 둔화 — 시장에겐 충분한 진전이다.",
     "MYTH_3_CASE": "2023년 내내 근원 CPI는 4~5%대로 목표(2%)의 두 배가 넘었지만, \"정점을 지나 내려온다\"는 방향이 확인되자 나스닥은 그 해 +40%대 랠리를 했다. 수준이 낮아질 때까지 기다렸다면 그 상승을 전부 놓쳤다.",
     "MYTH_3_QUESTION": "\"근원 CPI 2.9%면 아직 높은 거 아닌가\"",
-    "NET_LIQUIDITY_NOTE": "▲ 26주 중 최고 · 최근 8주 가속",
-    "NET_LIQUIDITY_VALUE": "$6.27T",
     "OPTION_OPTIMISM": "68%",
     "POSITIONING_1_LABEL": "선물 투기포지션",
     "POSITIONING_2_LABEL": "옵션 낙관도",
@@ -424,11 +469,8 @@
     "POSITION_4_TEXT_PREFIX": "이번 재료(달러 −0.7%)는",
     "POSITION_4_TITLE": "한국 투자자라면 — 환율 한 겹 더",
     "POSITION_GUIDE_KEYLINE": "같은 리포트라도 지금 내 포지션이 무엇이냐에 따라 해야 할 질문이 다르다.",
-    "REINTERPRETATION_RISK": "✓ 재해석 리스크: 낮음 — 헤드라인·근원·주거·슈퍼코어가 모두 같은 방향",
     "RETAIL_OPTIMISM": "61%",
     "RISKS_KEYLINE": "맞을 이유보다 틀릴 이유가 중요하다. Bullish 72점을 무너뜨릴 수 있는 4가지.",
-    "RRP_NOTE": "▼ 26주 최저 = 돈이 시장으로",
-    "RRP_VALUE": "$2,620억",
     "SECTION_10_TITLE": "개인이 여기서 착각하는 것 3가지",
     "SECTION_11_TITLE": "역사상 가장 비슷했던 순간 Top 5",
     "SECTION_12_TITLE": "앞으로 3가지 길",
@@ -450,8 +492,6 @@
     "STRIP_NOTE_BOLD": "\"이전\" = 한 달 전에 발표된 5월 수치",
     "STRIP_NOTE_PREFIX": "모두 전년동월비(1년 전 같은 달 대비 상승률).",
     "STRIP_NOTE_SUFFIX": "예상과의 차이는 \"놀라움\", 이전과의 차이는 \"추세\"를 본다. 이번엔 둘 다 예상 하회 + 추세 하락 — 이중으로 우호적.",
-    "TGA_NOTE": "— 26주 중 45% 위치 · 완만",
-    "TGA_VALUE": "$7,350억",
     "TRACK_1_STATUS": "검증 대기",
     "TRACK_1_TEXT": "이번 콜 — 1일 후 S&P500 ↑ · 1주 후 10년물 ↓",
     "TRACK_2_STATUS": "적중",
@@ -461,5 +501,94 @@
     "TRACK_NOTE": "이번 콜이 틀린다면 가장 유력한 이유: 7/17 옵션만기 청산이 지표 방향을 일시적으로 덮는 경우.",
     "TRACK_RATE_LABEL": "누적 적중률",
     "TRACK_RATE_VALUE": "1일 64% · 1주 58% (n=31)"
+  },
+  "market_reaction": {
+    "stocks": {
+      "nasdaq": {
+        "move": "+1.1%",
+        "note": "유사일 평균 +1.4% → 약함"
+      },
+      "russell2000": {
+        "move": "+1.6%",
+        "note": "유사일 평균 +1.2% → 강함"
+      }
+    },
+    "bond_yield": {
+      "us_2y": {
+        "move": "3.92→3.81%",
+        "note": "−11bp · 유사일 평균 −9bp"
+      },
+      "us_10y": {
+        "move": "4.18→4.09%",
+        "note": "−9bp · 유사일 평균 −7bp"
+      }
+    },
+    "dollar": {
+      "move": "−0.7%"
+    },
+    "gold": {
+      "move": "+0.9%"
+    },
+    "bitcoin": {
+      "move": "+2.4%",
+      "note": "유사일 평균 +2.1%"
+    },
+    "rate_expectations": {
+      "title": "9월 인하 확률 68% → 84%",
+      "note": "FedWatch, 발표 30분 내"
+    },
+    "rates_fx": {
+      "title": "2년물 −11bp · 10년물 −9bp · 달러 −0.7%",
+      "note": "정책 기대에 민감한 단기물이 먼저 반응"
+    },
+    "chain_keyline": "발표 → 주가 사이엔 5개의 연결고리가 있다. 이번엔 다섯 개가 전부 교과서대로 작동했다.",
+    "chain": [
+      {
+        "stage": "지표",
+        "title": "CPI 2.6%, 예상 −0.2%p 하회",
+        "note": "물가 둔화 재확인"
+      },
+      {
+        "stage": "금리 기대",
+        "title": "9월 인하 확률 68% → 84%",
+        "note": "FedWatch, 발표 30분 내"
+      },
+      {
+        "stage": "채권·달러",
+        "title": "2년물 −11bp · 10년물 −9bp · 달러 −0.7%",
+        "note": "정책 기대에 민감한 단기물이 먼저 반응"
+      },
+      {
+        "stage": "할인율",
+        "title": "성장주 밸류에이션 부담 완화",
+        "note": "금리↓ = 미래 이익의 현재가치↑"
+      },
+      {
+        "stage": "주식·코인",
+        "title": "나스닥 +1.1% · 러셀2000 +1.6% · BTC +2.4%",
+        "note": "금리에 눌려있던 중소형주가 가장 크게 반등"
+      }
+    ]
+  },
+  "market_data": {
+    "breadth": {
+      "advancers": "69%",
+      "new_highs_52w": "311",
+      "new_lows_52w": "24"
+    },
+    "liquidity": {
+      "net_liquidity": {
+        "value": "$6.27T",
+        "note": "▲ 26주 중 최고 · 최근 8주 가속"
+      },
+      "rrp": {
+        "value": "$2,620억",
+        "note": "▼ 26주 최저 = 돈이 시장으로"
+      },
+      "tga": {
+        "value": "$7,350억",
+        "note": "— 26주 중 45% 위치 · 완만"
+      }
+    }
   }
 }

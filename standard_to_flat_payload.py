@@ -20,10 +20,25 @@ def set_value(flat, expected_keys, key, value):
 def get_path(data, path, default=""):
     current = data
     for part in path:
-        if not isinstance(current, dict) or part not in current:
+        if isinstance(current, dict):
+            if part not in current:
+                return default
+            current = current[part]
+        elif isinstance(current, list) and isinstance(part, int):
+            if part >= len(current):
+                return default
+            current = current[part]
+        else:
             return default
-        current = current[part]
     return default if current is None else current
+
+
+def first_path(data, paths, default=""):
+    for path in paths:
+        value = get_path(data, path, None)
+        if value not in (None, ""):
+            return value
+    return default
 
 
 def probability_text(value):
@@ -41,37 +56,37 @@ def probability_number(value):
 def map_direct(flat, expected_keys, canonical):
     mappings = {
         "REPORT_TITLE": ("meta", "report_title"),
-        "REPORT_DATETIME": ("meta", "report_datetime"),
+        "REPORT_DATETIME": ("meta", "report_datetime_display"),
         "BRAND_NAME": ("meta", "brand_name"),
         "SAMPLE_BADGE": ("meta", "sample_badge"),
         "INDICATOR_NAME": ("meta", "indicator_name"),
         "MULTI_EVENT_NOTE": ("meta", "multi_event_note"),
         "LEAD_EVENT_LABEL": ("event", "lead_event_label"),
-        "SECONDARY_EVENT_NAME": ("event", "secondary", "name"),
-        "SECONDARY_EVENT_LABEL": ("event", "secondary", "label"),
-        "SECONDARY_EVENT_TITLE": ("event", "secondary", "title"),
-        "SECONDARY_EVENT_ACTUAL": ("event", "secondary", "actual"),
-        "SECONDARY_EVENT_EXPECTED": ("event", "secondary", "expected"),
-        "SECONDARY_EVENT_SUMMARY": ("event", "secondary", "summary"),
+        "SECONDARY_EVENT_NAME": ("event", "secondary_events", 0, "name"),
+        "SECONDARY_EVENT_LABEL": ("event", "secondary_events", 0, "label"),
+        "SECONDARY_EVENT_TITLE": ("event", "secondary_events", 0, "title"),
+        "SECONDARY_EVENT_ACTUAL": ("event", "secondary_events", 0, "actual"),
+        "SECONDARY_EVENT_EXPECTED": ("event", "secondary_events", 0, "expected"),
+        "SECONDARY_EVENT_SUMMARY": ("event", "secondary_events", 0, "summary"),
         "TABLE_ACTUAL_LABEL": ("event", "table_labels", "actual"),
         "TABLE_EXPECTED_LABEL": ("event", "table_labels", "expected"),
         "TABLE_PREVIOUS_LABEL": ("event", "table_labels", "previous"),
-        "CPI_ACTUAL": ("event", "actual"),
-        "CPI_EXPECTED": ("event", "expected"),
-        "CPI_PREVIOUS": ("event", "previous"),
-        "CPI_SUBLABEL": ("event", "sublabel"),
-        "CPI_SURPRISE_DELTA": ("event", "surprise_delta"),
+        "CPI_ACTUAL": ("event", "headline", "actual"),
+        "CPI_EXPECTED": ("event", "headline", "expected"),
+        "CPI_PREVIOUS": ("event", "headline", "previous"),
+        "CPI_SUBLABEL": ("event", "headline", "label"),
+        "CPI_SURPRISE_DELTA": ("event", "surprise", "actual_vs_expected"),
         "CORE_INDICATOR_NAME": ("event", "core", "name"),
         "CORE_CPI_ACTUAL": ("event", "core", "actual"),
         "CORE_CPI_EXPECTED": ("event", "core", "expected"),
         "CORE_CPI_PREVIOUS": ("event", "core", "previous"),
-        "CORE_CPI_SUBLABEL": ("event", "core", "sublabel"),
+        "CORE_CPI_SUBLABEL": ("event", "core", "label"),
         "CORE_CPI_SURPRISE_DELTA": ("event", "core", "surprise_delta"),
         "HEADLINE_PREFIX": ("headline", "prefix"),
-        "HEADLINE_SURPRISE": ("headline", "surprise"),
+        "HEADLINE_SURPRISE": ("event", "surprise", "label"),
         "HEADLINE_MESSAGE": ("headline", "message"),
         "IMPORTANCE_LABEL": ("headline", "importance_label"),
-        "SURPRISE_LABEL": ("headline", "surprise_label"),
+        "SURPRISE_LABEL": ("event", "surprise", "display_label"),
         "DETAIL_CONFIRM_LABEL": ("headline", "detail_confirm_label"),
         "NARRATIVE_FIT_LABEL": ("headline", "narrative_fit_label"),
         "OVERALL_CALL": ("market_view", "overall_call"),
@@ -83,6 +98,9 @@ def map_direct(flat, expected_keys, canonical):
     }
     for key, path in mappings.items():
         set_value(flat, expected_keys, key, get_path(canonical, path))
+
+    if not flat.get("REPORT_DATETIME"):
+        set_value(flat, expected_keys, "REPORT_DATETIME", get_path(canonical, ("meta", "release_datetime_kst")))
 
 
 def map_assets(flat, expected_keys, canonical):
@@ -99,6 +117,64 @@ def map_market_view(flat, expected_keys, canonical):
     for index, point in enumerate(get_path(canonical, ("market_view", "key_points"), []), start=1):
         set_value(flat, expected_keys, f"REASON_{index}_TITLE", point.get("title", ""))
         set_value(flat, expected_keys, f"REASON_{index}_TEXT", point.get("text", ""))
+
+
+def map_event_details(flat, expected_keys, canonical):
+    expectations = get_path(canonical, ("event", "expectations"), {})
+    set_value(flat, expected_keys, "EXPECTATION_48H", expectations.get("before_48h", ""))
+    set_value(flat, expected_keys, "EXPECTATION_24H", expectations.get("before_24h", ""))
+    set_value(flat, expected_keys, "EXPECTATION_24H_LABEL", expectations.get("before_24h_label", ""))
+    set_value(flat, expected_keys, "EXPECTATION_PATH_PREFIX", expectations.get("path_prefix", ""))
+    set_value(flat, expected_keys, "EXPECTATION_PATH_COMMENT", expectations.get("path_comment", ""))
+    set_value(flat, expected_keys, "EXPECTATION_SOURCE_LABEL", expectations.get("source_label", ""))
+    set_value(flat, expected_keys, "EXPECTATION_SOURCE_TEXT", expectations.get("source_text", ""))
+    set_value(flat, expected_keys, "EXPECTATION_WHY_LABEL", expectations.get("why_label", ""))
+    set_value(flat, expected_keys, "EXPECTATION_WHY_TEXT", expectations.get("why_text", ""))
+
+    for index, metric in enumerate(get_path(canonical, ("event", "sub_metrics"), []), start=1):
+        set_value(flat, expected_keys, f"COMPONENT_STACK_{index}", metric.get("stack_label", ""))
+        set_value(flat, expected_keys, f"COMPONENT_{index}_NAME", metric.get("label", ""))
+        set_value(flat, expected_keys, f"COMPONENT_{index}_SHARE", metric.get("weight_label", ""))
+        set_value(flat, expected_keys, f"COMPONENT_{index}_VALUE", metric.get("actual", ""))
+        previous = metric.get("previous_display", metric.get("previous", ""))
+        if previous and not str(previous).startswith("("):
+            previous = "(" + str(previous) + ")"
+        set_value(flat, expected_keys, f"COMPONENT_{index}_PREVIOUS", previous)
+        set_value(flat, expected_keys, f"COMPONENT_{index}_DIRECTION", metric.get("direction_label", ""))
+        set_value(flat, expected_keys, f"COMPONENT_{index}_VERDICT", metric.get("verdict", ""))
+
+
+def map_market_reaction(flat, expected_keys, canonical):
+    reaction = canonical.get("market_reaction", {})
+    set_value(flat, expected_keys, "CHAIN_KEYLINE", reaction.get("chain_keyline", ""))
+    for index, node in enumerate(reaction.get("chain", []), start=1):
+        set_value(flat, expected_keys, f"CHAIN_{index}_STAGE", node.get("stage", ""))
+        set_value(flat, expected_keys, f"CHAIN_{index}_TITLE", node.get("title", ""))
+        set_value(flat, expected_keys, f"CHAIN_{index}_NOTE", node.get("note", ""))
+
+
+def map_market_data(flat, expected_keys, canonical):
+    breadth = get_path(canonical, ("market_data", "breadth"), {})
+    set_value(flat, expected_keys, "BREADTH_ADVANCERS", breadth.get("advancers", ""))
+    set_value(flat, expected_keys, "BREADTH_HIGHS", breadth.get("new_highs_52w", ""))
+    set_value(flat, expected_keys, "BREADTH_LOWS", breadth.get("new_lows_52w", ""))
+
+    liquidity = get_path(canonical, ("market_data", "liquidity"), {})
+    set_value(flat, expected_keys, "NET_LIQUIDITY_VALUE", get_path(liquidity, ("net_liquidity", "value")))
+    set_value(flat, expected_keys, "NET_LIQUIDITY_NOTE", get_path(liquidity, ("net_liquidity", "note")))
+    set_value(flat, expected_keys, "RRP_VALUE", get_path(liquidity, ("rrp", "value")))
+    set_value(flat, expected_keys, "RRP_NOTE", get_path(liquidity, ("rrp", "note")))
+    set_value(flat, expected_keys, "TGA_VALUE", get_path(liquidity, ("tga", "value")))
+    set_value(flat, expected_keys, "TGA_NOTE", get_path(liquidity, ("tga", "note")))
+
+
+def map_analysis(flat, expected_keys, canonical):
+    anatomy = get_path(canonical, ("analysis", "indicator_anatomy"), {})
+    set_value(flat, expected_keys, "ANATOMY_KEYLINE", anatomy.get("keyline", ""))
+    set_value(flat, expected_keys, "COMPONENT_LEGEND_NOTE", anatomy.get("legend_note", ""))
+    set_value(flat, expected_keys, "REINTERPRETATION_RISK", anatomy.get("reinterpretation_risk", ""))
+    set_value(flat, expected_keys, "BREADTH_SUMMARY", get_path(canonical, ("analysis", "market_breadth", "summary")))
+    set_value(flat, expected_keys, "MARKET_FOCUS_KEYLINE", get_path(canonical, ("analysis", "market_focus", "keyline")))
 
 
 def map_historical_cases(flat, expected_keys, canonical):
@@ -164,6 +240,10 @@ def build_flat_payload(canonical, reference_flat):
 
     map_direct(flat, expected_keys, canonical)
     map_market_view(flat, expected_keys, canonical)
+    map_event_details(flat, expected_keys, canonical)
+    map_market_reaction(flat, expected_keys, canonical)
+    map_market_data(flat, expected_keys, canonical)
+    map_analysis(flat, expected_keys, canonical)
     map_assets(flat, expected_keys, canonical)
     map_historical_cases(flat, expected_keys, canonical)
     if not map_scenarios(flat, expected_keys, canonical):

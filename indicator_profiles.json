@@ -1,0 +1,102 @@
+{
+  "CPI": {
+    "display_name": "미국 소비자물가지수",
+    "country": "US",
+    "category": "inflation",
+    "headline_required": true,
+    "core_supported": true,
+    "sub_metrics": ["shelter", "supercore", "goods", "food", "energy"],
+    "default_unit": "%",
+    "interpretation_focus": ["inflation_pressure", "fed_policy", "real_yield", "risk_assets"]
+  },
+  "PPI": {
+    "display_name": "미국 생산자물가지수",
+    "country": "US",
+    "category": "inflation",
+    "headline_required": true,
+    "core_supported": true,
+    "sub_metrics": ["final_demand", "goods", "services", "trade_services", "energy"],
+    "default_unit": "%",
+    "interpretation_focus": ["pipeline_inflation", "fed_policy", "margin_pressure", "rates"]
+  },
+  "PCE": {
+    "display_name": "미국 개인소비지출 물가지수",
+    "country": "US",
+    "category": "inflation",
+    "headline_required": true,
+    "core_supported": true,
+    "sub_metrics": ["goods", "services", "housing", "supercore", "healthcare"],
+    "default_unit": "%",
+    "interpretation_focus": ["fed_preferred_inflation", "fed_policy", "real_yield", "risk_assets"]
+  },
+  "NFP": {
+    "display_name": "미국 비농업 고용",
+    "country": "US",
+    "category": "labor",
+    "headline_required": true,
+    "core_supported": false,
+    "sub_metrics": ["unemployment_rate", "average_hourly_earnings", "labor_force_participation", "revision"],
+    "default_unit": "k",
+    "interpretation_focus": ["labor_demand", "wage_pressure", "fed_policy", "growth_risk"]
+  },
+  "UNEMPLOYMENT_RATE": {
+    "display_name": "미국 실업률",
+    "country": "US",
+    "category": "labor",
+    "headline_required": true,
+    "core_supported": false,
+    "sub_metrics": ["labor_force_participation", "u6_unemployment", "employment_population_ratio"],
+    "default_unit": "%",
+    "interpretation_focus": ["labor_slack", "growth_risk", "fed_policy", "risk_assets"]
+  },
+  "AVERAGE_HOURLY_EARNINGS": {
+    "display_name": "미국 평균시급",
+    "country": "US",
+    "category": "labor",
+    "headline_required": true,
+    "core_supported": false,
+    "sub_metrics": ["mom_change", "yoy_change", "weekly_hours"],
+    "default_unit": "%",
+    "interpretation_focus": ["wage_pressure", "inflation_pressure", "fed_policy", "consumer_income"]
+  },
+  "RETAIL_SALES": {
+    "display_name": "미국 소매판매",
+    "country": "US",
+    "category": "growth",
+    "headline_required": true,
+    "core_supported": true,
+    "sub_metrics": ["ex_auto", "control_group", "gasoline", "restaurants"],
+    "default_unit": "%",
+    "interpretation_focus": ["consumer_demand", "growth_momentum", "inflation_pressure", "earnings"]
+  },
+  "ISM_MANUFACTURING": {
+    "display_name": "미국 ISM 제조업 PMI",
+    "country": "US",
+    "category": "business_survey",
+    "headline_required": true,
+    "core_supported": false,
+    "sub_metrics": ["new_orders", "prices_paid", "employment", "supplier_deliveries"],
+    "default_unit": "index",
+    "interpretation_focus": ["manufacturing_cycle", "price_pressure", "employment", "growth_risk"]
+  },
+  "ISM_SERVICES": {
+    "display_name": "미국 ISM 서비스업 PMI",
+    "country": "US",
+    "category": "business_survey",
+    "headline_required": true,
+    "core_supported": false,
+    "sub_metrics": ["business_activity", "new_orders", "prices_paid", "employment"],
+    "default_unit": "index",
+    "interpretation_focus": ["services_cycle", "price_pressure", "employment", "growth_momentum"]
+  },
+  "FOMC_RATE_DECISION": {
+    "display_name": "미국 FOMC 금리결정",
+    "country": "US",
+    "category": "monetary_policy",
+    "headline_required": true,
+    "core_supported": false,
+    "sub_metrics": ["target_rate", "vote", "dot_plot", "statement_tone", "powell_tone"],
+    "default_unit": "bp",
+    "interpretation_focus": ["policy_path", "rate_expectations", "financial_conditions", "risk_assets"]
+  }
+}
