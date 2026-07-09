@@ -1,0 +1,615 @@
+{
+  "meta": {
+    "report_title": "6월 NFP 샘플 리포트 — 매크로 브리핑",
+    "report_datetime_display": "2026-08-07 21:30 발표 · 미국 노동통계국(BLS) · 가상 샘플",
+    "brand_name": "매크로 브리핑",
+    "indicator_type": "NFP",
+    "indicator_name": "NFP",
+    "indicator_display_name": "미국 비농업고용",
+    "country": "US",
+    "release_datetime_kst": "2026-08-07 21:30",
+    "is_sample": true,
+    "language": "ko",
+    "sample_badge": "SAMPLE · 가상 데이터",
+    "multi_event_note": "⧉ 비농업고용·실업률·평균시급이 함께 발표된 가상 샘플입니다"
+  },
+  "event": {
+    "headline": {
+      "name": "Nonfarm Payrolls",
+      "label": "고용 증가폭",
+      "actual": "+145K",
+      "expected": "+175K",
+      "previous": "+210K",
+      "unit": "K",
+      "frequency": "MoM",
+      "direction_good_when": "balanced"
+    },
+    "core": {
+      "name": "평균시급",
+      "label": "임금 압력",
+      "actual": "+0.2%",
+      "expected": "+0.3%",
+      "previous": "+0.3%",
+      "unit": "%",
+      "frequency": "MoM",
+      "surprise_delta": "예상 −0.1%p",
+      "required": false
+    },
+    "sub_metrics": [
+      {
+        "key": "unemployment_rate",
+        "label": "실업률",
+        "actual": "4.2%",
+        "expected": "",
+        "previous": "전월 4.1%",
+        "unit": "%",
+        "importance": "high",
+        "description": "실업률 세부 흐름",
+        "stack_label": "실업률",
+        "weight_label": "노동시장 여유",
+        "direction_label": "▲ 상승",
+        "verdict": "비우호"
+      },
+      {
+        "key": "average_hourly_earnings",
+        "label": "평균시급",
+        "actual": "+0.2%",
+        "expected": "",
+        "previous": "전월 +0.3%",
+        "unit": "%",
+        "importance": "high",
+        "description": "평균시급 세부 흐름",
+        "stack_label": "임금",
+        "weight_label": "임금 압력",
+        "direction_label": "▼ 둔화",
+        "verdict": "우호"
+      },
+      {
+        "key": "labor_force_participation",
+        "label": "경제활동참가율",
+        "actual": "62.6%",
+        "expected": "",
+        "previous": "전월 62.5%",
+        "unit": "%",
+        "importance": "high",
+        "description": "경제활동참가율 세부 흐름",
+        "stack_label": "참가율",
+        "weight_label": "공급 측 완충",
+        "direction_label": "▲ 상승",
+        "verdict": "우호"
+      },
+      {
+        "key": "revision",
+        "label": "이전치 수정",
+        "actual": "−35K",
+        "expected": "",
+        "previous": "직전 +210K",
+        "unit": "%",
+        "importance": "high",
+        "description": "이전치 수정 세부 흐름",
+        "stack_label": "수정",
+        "weight_label": "고용 모멘텀",
+        "direction_label": "▼ 하향",
+        "verdict": "비우호"
+      },
+      {
+        "key": "private_payrolls",
+        "label": "민간고용",
+        "actual": "+118K",
+        "expected": "",
+        "previous": "전월 +188K",
+        "unit": "%",
+        "importance": "high",
+        "description": "민간고용 세부 흐름",
+        "stack_label": "민간",
+        "weight_label": "민간 수요",
+        "direction_label": "▼ 둔화",
+        "verdict": "중립"
+      }
+    ],
+    "surprise": {
+      "direction": "below_expected",
+      "label": "예상 하회",
+      "display_label": "Labor Cooling (z −1.3)",
+      "actual_vs_expected": "예상 −30K",
+      "market_meaning": "고용 냉각과 인하 기대 강화, 단 성장 우려 동반"
+    },
+    "expectations": {
+      "before_48h": "+190K",
+      "before_24h": "+175K",
+      "before_24h_label": "24시간 전",
+      "path_prefix": "시장 기대의 이동 경로: 48시간 전",
+      "path_comment": "기대가 낮아졌지만 실제 고용은 더 약했다.",
+      "source_label": "기대치 출처:",
+      "source_text": "이코노미스트 컨센서스와 고용 선행지표의 가상 예시.",
+      "why_label": "왜 내려왔나:",
+      "why_text": "구인 감소와 실업수당 증가가 반영됐다는 가정."
+    },
+    "secondary_events": [
+      {
+        "name": "실업률",
+        "label": "보조 · ★★★★☆",
+        "title": "함께 발표 · 실업률",
+        "actual": "4.2%",
+        "expected": "4.1%",
+        "summary": "고용 냉각을 확인하는 방향의 가상 샘플"
+      }
+    ],
+    "lead_event_label": "주도 지표 · ★★★★★",
+    "table_labels": {
+      "actual": "실제",
+      "expected": "예상",
+      "previous": "이전 (수정치)"
+    }
+  },
+  "headline": {
+    "prefix": "6월 NFP",
+    "surprise": "예상 소폭 하회",
+    "message": "고용 증가폭이 예상보다 약했다",
+    "importance_label": "중요도 ★★★★★",
+    "surprise_label": "Mild Surprise (z −1.1)",
+    "detail_confirm_label": "임금도 둔화, 실업률은 상승",
+    "narrative_fit_label": "고용 냉각 내러티브에 부합"
+  },
+  "market_view": {
+    "overall_call": "Mixed Bullish",
+    "overall_score": "61",
+    "one_line_summary": "인하 기대와 성장 우려가 공존",
+    "score_explanation": "※ 점수대별 설명은 투자 조언이 아니라 이 점수를 어떻게 읽을지의 기준표다. 같은 68점이라도 개인의 포지션·기간에 따라 행동은 달라진다(14번 상태별 점검 참고).",
+    "previous_call": "이전 · Neutral 58",
+    "current_call": "오늘 · Mixed Bullish 61 (+3)",
+    "key_points": [
+      {
+        "title": "인하 기대 강화.",
+        "text": "고용과 임금이 모두 예상보다 약함"
+      },
+      {
+        "title": "성장 우려 동반.",
+        "text": "실업률 상승과 이전치 하향 수정"
+      },
+      {
+        "title": "시장 폭 확인 필요.",
+        "text": "방어주만 오르면 해석 약화"
+      }
+    ]
+  },
+  "analysis": {
+    "summary_html": "<p>NFP 샘플은 고용 증가폭이 예상보다 낮고 임금도 둔화된 가상 사례다.</p><p>정책 측면에서는 인하 기대를 키우지만, 동시에 경기 둔화로 재해석될 위험이 있어 주식 반응은 혼합적이다.</p>",
+    "indicator_anatomy": {
+      "keyline": "고용 증가폭, 실업률, 임금이 함께 노동시장 냉각을 가리킨다.",
+      "legend_note": "NFP는 고용자수뿐 아니라 실업률·임금·수정치를 함께 봐야 한다.",
+      "reinterpretation_risk": "✓ 재해석 리스크: 보통 — 인하 기대와 경기 둔화 우려가 공존"
+    },
+    "market_breadth": {
+      "summary": "방어주와 장기채가 함께 강해지는 혼합 반응"
+    },
+    "market_focus": {
+      "keyline": "시장은 고용 냉각을 인하 기대와 성장 리스크 사이에서 저울질했다."
+    }
+  },
+  "assets_meta": {
+    "accordion_hint": "각 자산을 누르면 상세 설명이 열립니다 ▸",
+    "match_label": "교과서 일치"
+  },
+  "assets": [
+    {
+      "name": "나스닥100",
+      "move": "+0.3%",
+      "note": "금리 하락은 우호, 성장 우려는 부담",
+      "chip": "혼합"
+    },
+    {
+      "name": "러셀2000",
+      "move": "−0.2%",
+      "note": "경기 민감 부담",
+      "chip": "약세"
+    },
+    {
+      "name": "2년물 금리",
+      "move": "−9bp",
+      "note": "인하 기대 강화",
+      "chip": "우호"
+    },
+    {
+      "name": "10년물 금리",
+      "move": "−7bp",
+      "note": "성장 우려 반영",
+      "chip": "우호"
+    },
+    {
+      "name": "달러지수",
+      "move": "−0.4%",
+      "note": "금리차 축소",
+      "chip": "약세"
+    },
+    {
+      "name": "금",
+      "move": "+0.8%",
+      "note": "안전자산 수요",
+      "chip": "강세"
+    },
+    {
+      "name": "비트코인",
+      "move": "+0.4%",
+      "note": "유동성 기대와 위험회피 혼재",
+      "chip": "혼합"
+    },
+    {
+      "name": "VIX",
+      "move": "+0.6pt",
+      "note": "성장 우려 반영",
+      "chip": "비우호"
+    }
+  ],
+  "historical_cases_meta": {
+    "keyline": "고용 냉각 후 금리 하락과 성장 우려가 함께 나타난 가상 유사사례",
+    "hint": "샘플 비교",
+    "summary_bold": "초기 반응은 혼합적",
+    "summary_text": "이고 다음 소비 지표가 방향을 갈랐다.",
+    "average_label": "유사사례 평균",
+    "average_return": "+0.1%",
+    "average_detail": "가상 데이터"
+  },
+  "historical_cases": [
+    {
+      "title": "NFP 유사사례 1",
+      "subtitle": "예상보다 완화적",
+      "subtitle_prefix": "패턴",
+      "subtitle_bold": "금리 기대 하락",
+      "similarity": "82%",
+      "return": "+1.2%",
+      "return_label": "1개월"
+    },
+    {
+      "title": "NFP 유사사례 2",
+      "subtitle": "세부항목 혼재",
+      "subtitle_prefix": "패턴",
+      "subtitle_bold": "초기 반응 후 되돌림",
+      "similarity": "76%",
+      "return": "-0.4%",
+      "return_label": "1개월"
+    },
+    {
+      "title": "NFP 유사사례 3",
+      "subtitle": "정책 기대 강화",
+      "subtitle_prefix": "패턴",
+      "subtitle_bold": "장기금리 하락",
+      "similarity": "72%",
+      "return": "+0.8%",
+      "return_label": "1개월"
+    },
+    {
+      "title": "NFP 유사사례 4",
+      "subtitle": "성장 우려 동반",
+      "subtitle_prefix": "패턴",
+      "subtitle_bold": "방어주 상대 강세",
+      "similarity": "68%",
+      "return": "-0.6%",
+      "return_label": "1개월"
+    },
+    {
+      "title": "NFP 유사사례 5",
+      "subtitle": "선반영 과다",
+      "subtitle_prefix": "패턴",
+      "subtitle_bold": "차익실현 우세",
+      "similarity": "64%",
+      "return": "+0.1%",
+      "return_label": "1개월"
+    }
+  ],
+  "scenarios": [
+    {
+      "name": "기본: 완만한 고용 냉각",
+      "probability": 55,
+      "path": "인하 기대가 성장 우려보다 우세",
+      "beneficiaries": "장기채 · 우량 성장주 · 금",
+      "trigger_bold": "확인 조건:",
+      "trigger_text": "2년물 안정과 달러 약세가 유지",
+      "invalidation_bold": "무효 조건:",
+      "invalidation_text": "다음 핵심 지표가 반대 방향으로 급반전",
+      "invalidation": "2년물 재상승",
+      "avoid": "발표 직후 추격 매수"
+    },
+    {
+      "name": "상방: 위험선호 확산",
+      "probability": 25,
+      "path": "장기채와 우량주 선호",
+      "beneficiaries": "중소형주 · 반도체 · 크레딧",
+      "trigger_bold": "확인 조건:",
+      "trigger_text": "시장 폭이 넓어지고 VIX가 하락",
+      "invalidation_bold": "무효 조건:",
+      "invalidation_text": "대형주만 오르는 좁은 랠리",
+      "invalidation": "상승 종목 비율 둔화",
+      "avoid": "고변동 테마 과집중"
+    },
+    {
+      "name": "하방: 재해석",
+      "probability": 20,
+      "path": "경기 침체 우려가 커지는 경우",
+      "beneficiaries": "현금 · 단기채 · 방어주",
+      "trigger_bold": "확인 조건:",
+      "trigger_text": "금리 하락이 성장 둔화로 읽힘",
+      "invalidation_bold": "무효 조건:",
+      "invalidation_text": "신용스프레드와 달러가 안정",
+      "invalidation": "리스크오프 확산",
+      "avoid": "레버리지 확대"
+    }
+  ],
+  "risks": [
+    {
+      "date": "D+1",
+      "title": "다음 보조지표",
+      "text": "실업수당 급증은 경기 우려 확대"
+    },
+    {
+      "date": "D+3",
+      "title": "채권시장 확인",
+      "text": "장기금리 하락이 위험회피로 읽히면 주식 부담"
+    },
+    {
+      "date": "D+7",
+      "title": "연준 커뮤니케이션",
+      "text": "연준이 고용 둔화를 강조하면 기대 강화"
+    },
+    {
+      "date": "D+14",
+      "title": "가격 변수",
+      "text": "유가보다 신용스프레드가 핵심 확인 변수"
+    }
+  ],
+  "sources": [
+    {
+      "name": "BLS Employment Situation",
+      "url": "https://www.bls.gov/news.release/empsit.toc.htm"
+    },
+    {
+      "name": "FRED",
+      "url": "https://fred.stlouisfed.org/"
+    }
+  ],
+  "flat_overrides": {
+    "BREADTH_ADVANCERS_LABEL": "상승 종목",
+    "BREADTH_HIGHS_LABEL": "52주 신고가",
+    "BREADTH_LOWS_LABEL": "52주 신저가",
+    "CHECKPOINT_1_DATE": "7/16",
+    "CHECKPOINT_1_IMPORTANCE": "★★★☆☆",
+    "CHECKPOINT_1_TEXT": "다음 실업수당청구 — 노동시장 냉각 지속 여부",
+    "CHECKPOINT_2_DATE": "7/17",
+    "CHECKPOINT_2_IMPORTANCE": "★★★★☆",
+    "CHECKPOINT_2_TEXT": "소매판매 + 옵션만기 — 강세/약세 갈림길",
+    "CHECKPOINT_3_DATE": "7/21",
+    "CHECKPOINT_3_IMPORTANCE": "★★★☆☆",
+    "CHECKPOINT_3_TEXT": "20년물 입찰 — 수요 부진 시 금리 반등 리스크",
+    "CHECKPOINT_4_DATE": "7/25",
+    "CHECKPOINT_4_IMPORTANCE": "★★★★★",
+    "CHECKPOINT_4_TEXT": "소매판매 — 고용 둔화가 소비 둔화로 번지는지 확인",
+    "CHECKPOINT_5_DATE": "7/29",
+    "CHECKPOINT_5_IMPORTANCE": "★★★★★",
+    "CHECKPOINT_5_TEXT": "FOMC 커뮤니케이션 — 성명서와 기자회견 톤 확인",
+    "CONFIDENCE_TITLE": "왜 72점이고 신뢰도는 \"보통\"인가",
+    "CONF_1_LABEL": "지표–시장반응 일치도",
+    "CONF_2_LABEL": "유동성 뒷받침",
+    "CONF_3_LABEL": "포지셔닝 여유 (롱 과밀)",
+    "CONF_4_LABEL": "정책 확인 대기 (PCE·FOMC 전)",
+    "CONF_5_LABEL": "데이터 완결성 (감마 등 미제공 2건)",
+    "CONTRARIAN_BOLD_1": "2년물 금리와 달러가 동시에 반응한 것",
+    "CONTRARIAN_BOLD_2": "정책 기대에 빌린 랠리",
+    "CONTRARIAN_BOLD_3": "발표 후 24시간의 금리 유지 여부",
+    "CONTRARIAN_EASY_TEXT": "오늘 가격 반응은 발표 숫자만이 아니라 금리 기대, 달러, 포지셔닝이 함께 움직인 결과다. 그래서 다음 날부터는 원인 자산인 2년물과 달러를 같이 봐야 한다.",
+    "CONTRARIAN_MIDDLE": "이다. 즉 이번 반응은 헤드라인보다",
+    "CONTRARIAN_PREFIX": "대부분은 고용 쇼크를 곧바로 강세로 읽지만 오늘의 핵심은 인하 기대와 경기 우려의 줄다리기다",
+    "CONTRARIAN_SUFFIX": "다.",
+    "CONTRARIAN_SUFFIX_PREFIX": "다. 다음 보조지표가 반대로 나오면 오늘의 해석은 빠르게 약해질 수 있다. 봐야 할 것은 숫자 하나가 아니라",
+    "CURRENT_BAND_TEXT_BOLD": "분할·조건 확인 후 진입이 어울리는 구간",
+    "CURRENT_BAND_TEXT_PREFIX": "방향은 위쪽 우위. 단 한 번에 올라타기보다",
+    "CURRENT_BAND_TEXT_SUFFIX": "특히 지금처럼 포지셔닝 과열 동반 시",
+    "CURRENT_BAND_TITLE": "강세 우위 (현재 68)",
+    "DASHBOARD_KEYLINE": "시장 폭과 유동성은 양호하지만 발표 직후 포지셔닝 변화가 커서 확인 구간이 필요하다.",
+    "DELTA_LABEL": "판단의 변화:",
+    "DELTA_REASON_BOLD": "2주 전엔 \"지켜보자\"였다면, 오늘부터는 \"긍정 쪽으로 기울었다\"로 판단이 이동",
+    "DELTA_REASON_LINE": "움직인 이유: 서프라이즈 확인(+6) · 금리 기대 변화(+5) · 선반영 부담(−2)",
+    "DELTA_REASON_SUFFIX": "했다는 뜻. 점수 자체보다 이 방향 전환이 더 중요한 정보다.",
+    "DISCLAIMER_BOLD": "샘플이며 모든 수치는 가상의 예시 데이터",
+    "DISCLAIMER_PREFIX": "본 페이지는 서비스 시안용",
+    "DISCLAIMER_SUFFIX": "입니다. 실제 서비스는 투자 조언이 아닌 시장 해석·학습 자료로 제공됩니다. 데이터 출처(실서비스 기준): BLS · FRED · CME FedWatch · CFTC COT · CBOE",
+    "EASY_SUMMARY_BOLD_1": "금리 인하 기대는 커졌지만 성장 둔화 우려도 같이 올라온 상황",
+    "EASY_SUMMARY_BOLD_2": "50(중립)보다 오를 쪽에 무게가 실리지만, 확신 구간(85+)은 아니라는 뜻",
+    "EASY_SUMMARY_MIDDLE": "합니다. 다만 샘플 데이터이며 실제 매매 판단이 아니라 렌더링 테스트용 문맥입니다. 점수는",
+    "EASY_SUMMARY_PREFIX": "고용이 예상보다 약해지면서",
+    "EASY_SUMMARY_SUFFIX": "입니다. ※ bp = 0.01%p. 수치는 모두 가상 예시입니다.",
+    "ENERGY_LEGEND": "맨 오른쪽 7% = 에너지",
+    "FED_KEYLINE": "이번 NFP는 연준의 고용 책무 쪽 부담을 키우며 인하 논거를 보강한 가상 샘플이다.",
+    "FED_WEIGHT_1_NAME": "고용",
+    "FED_WEIGHT_1_VALUE": "45%",
+    "FED_WEIGHT_2_NAME": "물가",
+    "FED_WEIGHT_2_VALUE": "35%",
+    "FED_WEIGHT_3_NAME": "금융안정",
+    "FED_WEIGHT_3_VALUE": "20%",
+    "FED_WEIGHT_NOTE": "추정 근거: 이번 샘플 이벤트가 연준의 정책 경로와 금융여건 판단에 미치는 영향을 가상으로 배분했다.",
+    "FLOW_EASY_TEXT": "좋은 이벤트라도 이미 많이 오른 곳보다 아직 덜 반영된 자산으로 돈이 이동할 수 있다.",
+    "FLOW_IN_1_NAME": "장기 국채",
+    "FLOW_IN_1_NOTE": "인하 사이클 초입의 전형적 매수처 — 금리가 내리면 채권 가격은 오른다",
+    "FLOW_IN_2_NAME": "중소형주 (러셀2000)",
+    "FLOW_IN_2_NOTE": "빚(변동금리) 부담이 큰 기업들이라 금리 인하의 직접 수혜 + 아직 포지션이 가볍다",
+    "FLOW_IN_3_NAME": "금",
+    "FLOW_IN_3_NOTE": "실질금리 하락 + 달러 약세의 동시 수혜",
+    "FLOW_KEYLINE": "기관은 발표 숫자보다 다음 자금 이동 경로를 먼저 본다. 이번 샘플의 핵심은 금리와 달러가 같은 방향으로 움직이는지다.",
+    "FLOW_OUT_1_NAME": "현금·MMF",
+    "FLOW_OUT_1_NOTE": "금리 인하가 시작되면 예금·단기채 이자 매력이 줄어든다 — 6조 달러 MMF 자금의 이동 압력",
+    "FLOW_OUT_2_NAME": "대형 기술주 (추가 매수 관점)",
+    "FLOW_OUT_2_NOTE": "이미 포지션 백분위 78% — 나빠서가 아니라 \"더 살 여력\"이 작아서",
+    "FOCUS_1_NAME": "금리 · 연준 피벗",
+    "FOCUS_1_NOTE": "이번 NFP가 고용 냉각 쪽에 꽂힘",
+    "FOCUS_2_NAME": "AI 실적 · CAPEX",
+    "FOCUS_2_NOTE": "다음 주 빅테크 실적 개막 — 실적 시즌엔 1순위로 교체될 수 있음",
+    "FOCUS_3_NAME": "재정적자 · 국채 수급",
+    "FOCUS_3_NOTE": "7/21 20년물 입찰 대기 — 부진 시 순위 급등 주의",
+    "FOCUS_4_NAME": "지정학 리스크",
+    "FOCUS_4_NOTE": "유가 안정으로 후순위",
+    "FUTURES_POSITIONING": "74%",
+    "LESSON_FORMULA": "재료의 힘 = 서프라이즈 크기 × (1 − 선반영 비율) × 포지셔닝 여유.",
+    "LESSON_TEXT": "서프라이즈가 커도(z −1.8) 부분 선반영과 롱 쏠림이 곱해지면 실제 연료는 절반으로 준다. 숫자만 보지 말고 이 세 항을 곱해 보는 습관이 개인과 기관의 차이를 만든다.",
+    "LIQUIDITY_LABEL": "유동성 점수",
+    "LIQUIDITY_SCORE": "82",
+    "LIQUIDITY_STATUS": "↑↑ 최근 8주 최고",
+    "MYTH_1_ANSWER_BOLD": "발표 다음 날이 단기 고점",
+    "MYTH_1_ANSWER_PREFIX": "부분 선반영 + 롱 쏠림 상태의 호재는",
+    "MYTH_1_ANSWER_SUFFIX": "이 된 사례가 유사 7건 중 4건. 재료의 힘은 이미 절반 소비됐다.",
+    "MYTH_1_CASE": "유사 이벤트에서는 좋은 숫자가 나온 뒤에도 선반영과 포지셔닝 때문에 하루 뒤 반응이 달라진 경우가 있었다.",
+    "MYTH_1_QUESTION": "좋은 숫자면 다음 날 사도 늦지 않다",
+    "MYTH_2_ANSWER_BOLD": "왜 내리는지",
+    "MYTH_2_ANSWER_PREFIX": "금리가 내려간",
+    "MYTH_2_ANSWER_SUFFIX": "이 중요하다. 정책 완화 기대면 호재, 성장 둔화 공포면 악재가 될 수 있다.",
+    "MYTH_2_CASE": "같은 \"인하 시작\"인데 결과는 정반대였다 — 1995년과 2019년의 보험성 인하(경기가 버티는데 미리 내림) 뒤엔 강한 랠리가 왔지만, 2007년 9월 인하는 침체를 뒤따라가는 인하였고 이후 1년간 시장은 폭락했다. 인하 자체가 아니라 \"왜 내리는가\"가 갈랐다. 지금은 전자에 가깝지만, 고용이 급랭하면 후자로 재해석된다.",
+    "MYTH_2_QUESTION": "금리만 내리면 주식은 무조건 오른다",
+    "MYTH_3_ANSWER_BOLD": "방향과 기대 대비",
+    "MYTH_3_ANSWER_PREFIX": "시장은 수준이 아니라",
+    "MYTH_3_ANSWER_SUFFIX": "를 산다. 2.9%도 예상(3.0%)을 밑돌았고 3개월 연속 둔화 — 시장에겐 충분한 진전이다.",
+    "MYTH_3_CASE": "헤드라인과 세부항목이 갈렸던 이벤트에서는 발표 직후 반응이 몇 시간 뒤 뒤집히는 사례가 있었다.",
+    "MYTH_3_QUESTION": "헤드라인만 보면 충분하다",
+    "OPTION_OPTIMISM": "68%",
+    "POSITIONING_1_LABEL": "선물 투기포지션",
+    "POSITIONING_2_LABEL": "옵션 낙관도",
+    "POSITIONING_3_LABEL": "개인 낙관도",
+    "POSITIONING_TITLE": "포지셔닝 — 얼마나 쏠렸나",
+    "POSITION_1_TEXT_BOLD": "\"어디서 틀렸다고 인정할까\"",
+    "POSITION_1_TEXT_PREFIX": "질문은 \"더 살까\"가 아니라",
+    "POSITION_1_TEXT_SUFFIX": "다. 2년물 3.81% 상향 이탈, S&P500 발표일 종가 하회 — 이 두 개가 이 리포트 기준의 무효화 라인. 수익 중이라면 7/17 만기 전 일부 이익 실현 여부를 스스로 판단할 지점.",
+    "POSITION_1_TITLE": "이미 보유 중이라면",
+    "POSITION_2_TEXT_BOLD": "\"약세 시나리오(20%)의 되돌림이 오면 나는 살 수 있는 계획이 있는가?\"",
+    "POSITION_2_TEXT_PREFIX": "롱 과밀 국면의 추격 진입은 유사 사례에서 승률이 낮았다. 질문:",
+    "POSITION_2_TEXT_SUFFIX": "진입 트리거를 가격이 아니라 조건(2년물 유지 + 되돌림 −2% 이내)으로 미리 적어둘 것.",
+    "POSITION_2_TITLE": "현금 비중이 크다면",
+    "POSITION_3_TEXT_BOLD": "확인 후 진입은 약세 시나리오 하나를 통째로 소거",
+    "POSITION_3_TEXT_PREFIX": "오늘 밤 갭에 올라타는 것과 7/16 PPI 확인 후 들어가는 것의 차이는 하루지만,",
+    "POSITION_3_TEXT_SUFFIX": "한다. 급할 이유가 있는지 자문할 것.",
+    "POSITION_3_TITLE": "신규 진입을 고민 중이라면",
+    "POSITION_4_TEXT_BOLD_1": "미장 주가에는 호재지만 원화 환산 수익률은 깎는 방향",
+    "POSITION_4_TEXT_BOLD_2": "\"내 미장 계좌는 환노출인가, 환헤지인가?\"",
+    "POSITION_4_TEXT_MIDDLE": "이다. 달러 약세 국면의 미장 수익은 환차손이 일부 상쇄한다 — 지수 +1.1%여도 원화로는 +0.4%일 수 있다. 반대로 원화 강세는 외국인의 국장 순매수 유인이기도 하다. 질문:",
+    "POSITION_4_TEXT_PREFIX": "이번 재료(달러 −0.7%)는",
+    "POSITION_4_TITLE": "한국 투자자라면 — 환율 한 겹 더",
+    "POSITION_GUIDE_KEYLINE": "같은 리포트라도 지금 내 포지션이 무엇이냐에 따라 해야 할 질문이 다르다.",
+    "RETAIL_OPTIMISM": "61%",
+    "RISKS_KEYLINE": "핵심 리스크는 발표 숫자 자체가 아니라 다음 데이터와 채권시장이 같은 해석을 유지하느냐다.",
+    "SECTION_10_TITLE": "개인이 여기서 착각하는 것 3가지",
+    "SECTION_11_TITLE": "역사상 가장 비슷했던 순간 Top 5",
+    "SECTION_12_TITLE": "앞으로 3가지 길",
+    "SECTION_13_TITLE": "이 해석이 틀릴 수 있는 이유",
+    "SECTION_14_TAG": "조언 아님 · 스스로에게 던질 질문",
+    "SECTION_14_TITLE_PREFIX": "그래서 나는 — 상태별 점검",
+    "SECTION_15_TITLE": "오늘 배울 원리 한 가지",
+    "SECTION_16_TITLE": "AI 예측 성적표",
+    "SECTION_17_TITLE": "다음 체크포인트",
+    "SECTION_1_TITLE": "30초 결론",
+    "SECTION_2_TITLE": "지금 시장이 보고 있는 것",
+    "SECTION_3_TITLE": "시장 체력 대시보드",
+    "SECTION_4_TITLE": "지표 해부 — 헤드라인 뒤에 숨은 것",
+    "SECTION_5_TITLE": "NFP 둔화가 어떻게 시장 반응이 됐나",
+    "SECTION_6_TITLE": "자산별 반응과 이유",
+    "SECTION_7_TITLE": "연준은 이걸 어떻게 볼까",
+    "SECTION_8_TITLE": "기관은 어디로 움직일까",
+    "SECTION_9_TITLE": "시장이 놓치고 있는 핵심",
+    "STRIP_NOTE_BOLD": "\"이전\" = 한 달 전에 발표된 5월 수치",
+    "STRIP_NOTE_PREFIX": "모두 전년동월비(1년 전 같은 달 대비 상승률).",
+    "STRIP_NOTE_SUFFIX": "예상과의 차이는 \"놀라움\", 이전과의 차이는 \"추세\"를 본다. 이번엔 둘 다 예상 하회 + 추세 하락 — 이중으로 우호적.",
+    "TRACK_1_STATUS": "검증 대기",
+    "TRACK_1_TEXT": "2년물 금리: 발표 후 방향 유지 여부",
+    "TRACK_2_STATUS": "적중",
+    "TRACK_2_TEXT": "달러지수: 정책 기대 변화 확인",
+    "TRACK_3_STATUS": "빗나감 · 국채입찰 부진 누락",
+    "TRACK_3_TEXT": "시장 폭: 상승이 일부 종목에 갇히는지 확인",
+    "TRACK_NOTE": "세 지표가 같은 방향이면 해석 신뢰도가 올라가고, 둘 이상 엇갈리면 보수적으로 읽는다.",
+    "TRACK_RATE_LABEL": "누적 적중률",
+    "TRACK_RATE_VALUE": "1일 64% · 1주 58% (n=31)"
+  },
+  "market_reaction": {
+    "stocks": {
+      "nasdaq": {
+        "move": "+1.1%",
+        "note": "유사일 평균 +1.4% → 약함"
+      },
+      "russell2000": {
+        "move": "+1.6%",
+        "note": "유사일 평균 +1.2% → 강함"
+      }
+    },
+    "bond_yield": {
+      "us_2y": {
+        "move": "3.92→3.81%",
+        "note": "−11bp · 유사일 평균 −9bp"
+      },
+      "us_10y": {
+        "move": "4.18→4.09%",
+        "note": "−9bp · 유사일 평균 −7bp"
+      }
+    },
+    "dollar": {
+      "move": "−0.7%"
+    },
+    "gold": {
+      "move": "+0.9%"
+    },
+    "bitcoin": {
+      "move": "+2.4%",
+      "note": "유사일 평균 +2.1%"
+    },
+    "rate_expectations": {
+      "title": "9월 인하 확률 68% → 84%",
+      "note": "FedWatch, 발표 30분 내"
+    },
+    "rates_fx": {
+      "title": "2년물 −11bp · 10년물 −9bp · 달러 −0.7%",
+      "note": "정책 기대에 민감한 단기물이 먼저 반응"
+    },
+    "chain_keyline": "NFP 발표 → 노동시장 냉각 → 인하 기대 상승 → 장기채 강세, 주식은 성장 우려와 균형",
+    "chain": [
+      {
+        "stage": "지표",
+        "title": "NFP +145K, 예상 하회",
+        "note": "고용 수요 둔화"
+      },
+      {
+        "stage": "금리 기대",
+        "title": "인하 기대 상승",
+        "note": "임금 둔화 동반"
+      },
+      {
+        "stage": "채권·달러",
+        "title": "2년물 −9bp · 달러 −0.4%",
+        "note": "정책 기대 반영"
+      },
+      {
+        "stage": "할인율",
+        "title": "성장주 부담 완화",
+        "note": "단 경기 우려가 상쇄"
+      },
+      {
+        "stage": "주식·코인",
+        "title": "나스닥 +0.3% · 방어주 상대 강세",
+        "note": "혼합 반응"
+      }
+    ]
+  },
+  "market_data": {
+    "breadth": {
+      "advancers": "55%",
+      "new_highs_52w": "88",
+      "new_lows_52w": "51"
+    },
+    "liquidity": {
+      "net_liquidity": {
+        "value": "+0.1%",
+        "note": "가상"
+      },
+      "rrp": {
+        "value": "4,780억 달러",
+        "note": "가상"
+      },
+      "tga": {
+        "value": "7,510억 달러",
+        "note": "가상"
+      }
+    }
+  }
+}
