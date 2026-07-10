@@ -13,6 +13,7 @@ class GitHubCpiWorkflowTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.text = WORKFLOW.read_text(encoding="utf-8")
+        cls.lines = cls.text.splitlines()
 
     def step_block(self, name):
         marker = f"- name: {name}"
@@ -25,6 +26,79 @@ class GitHubCpiWorkflowTests(unittest.TestCase):
 
     def test_workflow_file_exists(self):
         self.assertTrue(WORKFLOW.exists())
+
+    def test_workflow_physical_lines_are_not_collapsed(self):
+        self.assertGreaterEqual(len(self.lines), 100)
+        first_non_empty = next(line for line in self.lines if line.strip())
+        self.assertEqual(first_non_empty, "name: Capture CPI Release")
+        self.assertNotIn("name: Capture CPI Release on:", self.text)
+
+    def test_top_level_keys_are_separate_unindented_lines(self):
+        for key in ("on:", "permissions:", "concurrency:", "jobs:"):
+            with self.subTest(key=key):
+                self.assertIn(key, self.lines)
+
+    def test_workflow_dispatch_and_schedule_are_under_on(self):
+        on_index = self.lines.index("on:")
+        permissions_index = self.lines.index("permissions:")
+        workflow_dispatch_index = self.lines.index("  workflow_dispatch:")
+        schedule_index = self.lines.index("  schedule:")
+
+        self.assertGreater(workflow_dispatch_index, on_index)
+        self.assertLess(workflow_dispatch_index, permissions_index)
+        self.assertGreater(schedule_index, on_index)
+        self.assertLess(schedule_index, permissions_index)
+
+    def test_jobs_capture_hierarchy_is_separate(self):
+        jobs_index = self.lines.index("jobs:")
+        capture_index = self.lines.index("  capture:")
+        runs_on_index = self.lines.index("    runs-on: ubuntu-latest")
+
+        self.assertGreater(capture_index, jobs_index)
+        self.assertGreater(runs_on_index, capture_index)
+
+    def test_run_blocks_keep_real_newlines(self):
+        offline_block = self.step_block("Run offline tests")
+        capture_block = self.step_block("Capture due CPI release")
+        result_block = self.step_block("Validate capture result")
+        commit_block = self.step_block("Commit captured release")
+
+        self.assertRegex(
+            offline_block,
+            r"run: \|\n\s+python -B -m unittest \\\n\s+tests/test_bls_cpi.py",
+        )
+        self.assertRegex(
+            capture_block,
+            r"run: \|\n\s+if \[ -n \"\$\{MANUAL_EVENT_ID:-\}\" \]; then\n"
+            r"\s+python scripts/automation/run_due_cpi_capture.py \\",
+        )
+        self.assertRegex(
+            result_block,
+            r"run: \|\n\s+python - <<'PY'\n\s+import fnmatch\n",
+        )
+        self.assertRegex(
+            commit_block,
+            r"run: \|\n\s+git config user.name "
+            r"\"github-actions\[bot\]\"\n",
+        )
+        self.assertRegex(
+            commit_block,
+            r"git commit -m \"data: capture \$\{EVENT_ID\} release\"\n"
+            r"\s+git push origin HEAD:main",
+        )
+
+    def test_python_heredocs_start_and_end_on_own_lines(self):
+        self.assertEqual(self.lines.count("          python - <<'PY'"), 2)
+        self.assertEqual(self.lines.count("          PY"), 2)
+
+    def test_commit_condition_and_allowed_path_validation_remain(self):
+        self.assertIn(
+            "        if: steps.result.outputs.should_commit == 'true' && github.ref_name == 'main'",
+            self.lines,
+        )
+        self.assertIn('              "data/releases/cpi/*/as_released.json",', self.lines)
+        self.assertIn('              "data/raw/bls/cpi/*/retrieved_*.json",', self.lines)
+        self.assertIn('              "data/processed/bls/cpi_latest.json",', self.lines)
 
     def test_workflow_dispatch_exists(self):
         self.assertIn("workflow_dispatch:", self.text)
