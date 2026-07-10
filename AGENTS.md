@@ -6,8 +6,15 @@
 
 ## 현재 단계
 현재 단계는 루트의 STAGE.md 첫 줄을 기준으로 한다.
-현재 작업 단계: 3.1
-3.1단계 목표는 BLS CPI 실제 데이터 수집기를 구현하되, canonical payload/HTML 리포트/GitHub Pages에는 아직 연결하지 않는 것이다.
+현재 작업 단계: 3.7
+3.7단계 목표는 canonical CPI 발표값을 입력으로 사용하는 구조화된 경제 해석 생성기를 구현하되, 실제 API 호출/GitHub Actions/HTML에는 아직 연결하지 않는 것이다.
+
+## AI 공급자 운영 방침
+- 코딩·개발 도구는 Codex를 사용한다.
+- 런타임 경제 해석 공급자는 OpenAI API이며 Responses API를 사용한다.
+- 향후 다른 공급자를 추가할 수 있도록 API 통신은 provider 모듈로 분리한다.
+- API 키는 `OPENAI_API_KEY` 환경변수 또는 GitHub Secrets로만 사용하며 코드, JSON, 로그, HTML에 저장하지 않는다.
+- 수치 계산은 Python 코드가 담당하고 AI는 검증된 입력 수치를 수정하거나 새 수치를 만들지 않고 해석만 담당한다.
 
 ## 절대 규칙
 1. templates/sample_report_v11.html은 읽기 전용 원본이다.
