@@ -18,6 +18,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from scripts.automation import process_cpi_release  # noqa: E402
+from scripts.automation import update_report_index  # noqa: E402
 from scripts.pipelines import build_cpi_release_canonical  # noqa: E402
 from scripts.pipelines import build_cpi_release_report  # noqa: E402
 from scripts.validators import validate_calendar_events  # noqa: E402
@@ -25,19 +26,21 @@ from scripts.validators import validate_calendar_events  # noqa: E402
 
 RESULT_SCHEMA_VERSION = "1.0"
 DEFAULT_PROVIDER = "rule_based"
-MAX_COMMIT_PATHS = 3
+MAX_COMMIT_PATHS = 4
 ZERO_USAGE = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
 SUCCESS_STATUSES = {
     "NO_PENDING_EVENT",
-    "PROCESSED",
-    "CANONICAL_ONLY_RESUMED",
+    "PROCESSED_AND_INDEXED",
+    "REPORT_ONLY_RESUMED_AND_INDEXED",
     "REPORT_ONLY_RESUMED",
+    "INDEX_ONLY_RESUMED",
     "ALREADY_PROCESSED",
 }
 COMMIT_STATUSES = {
-    "PROCESSED",
-    "CANONICAL_ONLY_RESUMED",
+    "PROCESSED_AND_INDEXED",
+    "REPORT_ONLY_RESUMED_AND_INDEXED",
     "REPORT_ONLY_RESUMED",
+    "INDEX_ONLY_RESUMED",
 }
 EVENT_ID_RE = re.compile(r"[A-Z0-9_]+\Z")
 SECRET_VALUE_RE = re.compile(
@@ -63,6 +66,7 @@ class PendingProcessingResult:
     canonical: dict[str, Any]
     analysis: dict[str, Any]
     report: dict[str, Any]
+    index: dict[str, Any]
     usage: dict[str, int]
     created_paths: tuple[str, ...]
     commit_paths: tuple[str, ...]
@@ -95,6 +99,10 @@ def analysis_path(root: Path, event_id: str) -> Path:
 
 def report_path(root: Path, event_id: str) -> Path:
     return root / "docs" / "reports" / f"{event_id}.html"
+
+
+def index_path(root: Path) -> Path:
+    return root / "docs" / "index.html"
 
 
 def relative_path(path: Path, root: Path) -> str:
@@ -130,6 +138,7 @@ def _result(
     canonical: dict[str, Any] | None = None,
     analysis: dict[str, Any] | None = None,
     report: dict[str, Any] | None = None,
+    index: dict[str, Any] | None = None,
     created_paths: list[str] | tuple[str, ...] = (),
     commit_paths: list[str] | tuple[str, ...] = (),
     pending_event_ids: list[str] | tuple[str, ...] = (),
@@ -146,6 +155,7 @@ def _result(
         canonical=canonical or _empty_artifact(),
         analysis=analysis or _empty_artifact(),
         report=report or _empty_artifact(),
+        index=index or _empty_artifact(),
         usage=dict(ZERO_USAGE),
         created_paths=tuple(created_paths),
         commit_paths=tuple(commit_paths),
@@ -229,6 +239,7 @@ def _validate_completed_event(
     now: datetime | None,
     process_func: Callable[..., Any],
     report_func: Callable[..., Any],
+    index_func: Callable[..., Any],
 ) -> bool:
     event_id = str(event["event_id"])
     try:
@@ -242,11 +253,15 @@ def _validate_completed_event(
         ):
             return False
         rendered = report_func(root, event_id)
-        return rendered.status == "ALREADY_UP_TO_DATE" and not rendered.html_created
+        if rendered.status != "ALREADY_UP_TO_DATE" or rendered.html_created:
+            return False
+        indexed = index_func(root, event_id, apply=False)
+        return indexed.status == "INDEX_ALREADY_UP_TO_DATE"
     except (
         PendingProcessingError,
         process_cpi_release.ProcessCpiError,
         build_cpi_release_report.CpiReportError,
+        update_report_index.ReportIndexError,
         OSError,
         ValueError,
     ):
@@ -283,6 +298,12 @@ def _artifacts(
         else:
             status = "existing" if before[name] else "created"
         values[name] = _artifact(status, path, root)
+    current_index = index_path(root)
+    values["index"] = (
+        _artifact("existing", current_index, root)
+        if current_index.exists()
+        else _empty_artifact()
+    )
     return values
 
 
@@ -291,6 +312,7 @@ def _allowed_paths(event_id: str) -> set[str]:
         f"data/generated/cpi/{event_id}/canonical_release.json",
         f"data/analysis/cpi/{event_id}/cpi-analysis-v1.json",
         f"docs/reports/{event_id}.html",
+        "docs/index.html",
     }
 
 
@@ -304,7 +326,7 @@ def validate_commit_paths(
     if EVENT_ID_RE.fullmatch(event_id) is None:
         raise PendingProcessingError("INVALID_COMMIT_PATH", "event_id is invalid")
     if len(paths) > MAX_COMMIT_PATHS:
-        raise PendingProcessingError("INVALID_COMMIT_PATH", "commit_paths may contain at most three paths")
+        raise PendingProcessingError("INVALID_COMMIT_PATH", "commit_paths may contain at most four paths")
     if len(paths) != len(set(paths)):
         raise PendingProcessingError("INVALID_COMMIT_PATH", "duplicate commit paths are not allowed")
     allowed = _allowed_paths(event_id)
@@ -317,7 +339,7 @@ def validate_commit_paths(
         if value not in allowed:
             raise PendingProcessingError("INVALID_COMMIT_PATH", "commit path is not an allowed derivative")
         if newly_created is not None and value not in newly_created:
-            raise PendingProcessingError("INVALID_COMMIT_PATH", "only newly created files may be committed")
+            raise PendingProcessingError("INVALID_COMMIT_PATH", "only current automation outputs may be committed")
         full_path = root.joinpath(*pure.parts)
         if full_path.is_symlink():
             raise PendingProcessingError("INVALID_COMMIT_PATH", "symlink commit path is forbidden")
@@ -349,6 +371,7 @@ def _failure_result(
         canonical=artifacts["canonical"],
         analysis=artifacts["analysis"],
         report=artifacts["report"],
+        index=artifacts["index"],
         created_paths=created,
         commit_paths=(),
     )
@@ -361,6 +384,7 @@ def _process_event(
     now: datetime | None,
     process_func: Callable[..., Any],
     report_func: Callable[..., Any],
+    index_func: Callable[..., Any],
 ) -> PendingProcessingResult:
     event_id = str(event["event_id"])
     paths = _paths_for_event(root, event_id)
@@ -455,14 +479,31 @@ def _process_event(
             invalid="report",
         )
 
+    try:
+        indexed = index_func(root, event_id)
+    except (update_report_index.ReportIndexError, OSError, ValueError):
+        return _failure_result(
+            "INDEX_UPDATE_FAILED",
+            root=root,
+            event=event,
+            before=before,
+        )
+    if indexed.status not in {"INDEX_UPDATED", "INDEX_ALREADY_UP_TO_DATE"}:
+        status = indexed.status if indexed.status in {"INDEX_CONFLICT", "INDEX_UPDATE_FAILED"} else "INDEX_UPDATE_FAILED"
+        return _failure_result(status, root=root, event=event, before=before)
+
     if before == {"canonical": False, "analysis": False, "report": False}:
-        status = "PROCESSED"
+        status = "PROCESSED_AND_INDEXED"
     elif before == {"canonical": True, "analysis": False, "report": False}:
-        status = "CANONICAL_ONLY_RESUMED"
+        status = "PROCESSED_AND_INDEXED"
     elif before == {"canonical": True, "analysis": True, "report": False}:
-        status = "REPORT_ONLY_RESUMED"
+        status = (
+            "REPORT_ONLY_RESUMED_AND_INDEXED"
+            if indexed.status == "INDEX_UPDATED"
+            else "REPORT_ONLY_RESUMED"
+        )
     elif before == {"canonical": True, "analysis": True, "report": True}:
-        status = "ALREADY_PROCESSED"
+        status = "INDEX_ONLY_RESUMED" if indexed.status == "INDEX_UPDATED" else "ALREADY_PROCESSED"
     else:
         return _failure_result(
             "INCONSISTENT_DERIVED_STATE",
@@ -472,6 +513,8 @@ def _process_event(
         )
 
     created = _created_paths(root, event_id, before)
+    if indexed.index_changed:
+        created.append("docs/index.html")
     commit = created if status in COMMIT_STATUSES else []
     try:
         validate_commit_paths(root, event_id, commit, newly_created=set(created))
@@ -489,6 +532,7 @@ def _process_event(
         canonical=artifacts["canonical"],
         analysis=artifacts["analysis"],
         report=artifacts["report"],
+        index=_artifact("updated" if indexed.index_changed else "existing", index_path(root), root),
         created_paths=created,
         commit_paths=commit,
     )
@@ -552,10 +596,12 @@ def run_pending_processing(
     now: datetime | None = None,
     process_func: Callable[..., Any] | None = None,
     report_func: Callable[..., Any] | None = None,
+    index_func: Callable[..., Any] | None = None,
 ) -> tuple[PendingProcessingResult, int]:
     root = root.resolve()
     process = process_func or process_cpi_release.process_release
     render = report_func or build_cpi_release_report.build_report
+    update_index = index_func or update_report_index.update_report_index
     result_path = resolve_result_path(root, result_json) if result_json is not None else None
     try:
         events = _load_calendar(root, now)
@@ -575,6 +621,7 @@ def run_pending_processing(
                     now=now,
                     process_func=process,
                     report_func=render,
+                    index_func=update_index,
                 )
         else:
             pending: list[dict[str, Any]] = []
@@ -593,6 +640,7 @@ def run_pending_processing(
                     now=now,
                     process_func=process,
                     report_func=render,
+                    index_func=update_index,
                 ):
                     pending.append(event)
             if not pending:
@@ -609,6 +657,7 @@ def run_pending_processing(
                     now=now,
                     process_func=process,
                     report_func=render,
+                    index_func=update_index,
                 )
     except PendingProcessingError as exc:
         result = _result(exc.code)

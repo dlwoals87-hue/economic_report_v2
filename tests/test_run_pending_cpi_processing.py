@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from unittest import mock
 
-from scripts.automation import process_cpi_release, run_pending_cpi_processing
+from scripts.automation import process_cpi_release, run_pending_cpi_processing, update_report_index
 from scripts.pipelines import build_cpi_release_report
 from scripts.providers import github_models, openai_responses
 from tests.test_build_cpi_release_canonical import (
@@ -55,22 +55,30 @@ class RunPendingCpiProcessingTests(unittest.TestCase):
                     root / "data" / "indicator_profiles.json",
                     {"CPI": {"display_name": "US Consumer Price Index", "country": "US"}},
                 )
+            (root / "docs").mkdir(parents=True, exist_ok=True)
+            (root / "docs" / "index.html").write_text(
+                "<!DOCTYPE html>\n<html><body>\n"
+                "<a href=\"reports/sample-report.html\">sample</a>\n"
+                "</body></html>\n",
+                encoding="utf-8",
+            )
             if release:
                 write_release(root)
             yield root
 
-    def run_processing(self, root: Path, *, event_id=None, result_name="result.json"):
+    def run_processing(self, root: Path, *, event_id=None, result_name="result.json", **kwargs):
         return run_pending_cpi_processing.run_pending_processing(
             root,
             event_id=event_id,
             result_json=root / result_name,
             now=NOW,
+            **kwargs,
         )
 
     def prepare_all(self, root: Path):
         result, exit_code = self.run_processing(root, event_id=EVENT_ID, result_name="prepared.json")
         self.assertEqual(exit_code, 0)
-        self.assertEqual(result.status, "PROCESSED")
+        self.assertEqual(result.status, "PROCESSED_AND_INDEXED")
         return result
 
     def test_01_missing_as_released_returns_no_pending_event(self):
@@ -92,7 +100,7 @@ class RunPendingCpiProcessingTests(unittest.TestCase):
                 side_effect=AssertionError("paid provider called"),
             ):
                 result, _ = self.run_processing(root)
-            self.assertEqual(result.status, "PROCESSED")
+            self.assertEqual(result.status, "PROCESSED_AND_INDEXED")
             self.assertFalse(result.external_api_called)
 
     def test_03_completed_event_is_excluded_from_auto_selection(self):
@@ -107,7 +115,7 @@ class RunPendingCpiProcessingTests(unittest.TestCase):
         with self.temp_root(release=True) as root:
             result, _ = self.run_processing(root)
             self.assertEqual(result.event_id, EVENT_ID)
-            self.assertEqual(result.status, "PROCESSED")
+            self.assertEqual(result.status, "PROCESSED_AND_INDEXED")
 
     def test_05_two_pending_events_are_rejected_without_generation(self):
         events = [calendar_event(), second_event()]
@@ -166,9 +174,9 @@ class RunPendingCpiProcessingTests(unittest.TestCase):
     def test_10_full_success_returns_processed(self):
         with self.temp_root(release=True) as root:
             result, exit_code = self.run_processing(root)
-            self.assertEqual(result.status, "PROCESSED")
+            self.assertEqual(result.status, "PROCESSED_AND_INDEXED")
             self.assertEqual(exit_code, 0)
-            self.assertEqual(len(result.created_paths), 3)
+            self.assertEqual(len(result.created_paths), 4)
             self.assertEqual(result.commit_paths, result.created_paths)
 
     def test_11_canonical_only_state_resumes_analysis_and_report(self):
@@ -177,13 +185,14 @@ class RunPendingCpiProcessingTests(unittest.TestCase):
             self.assertEqual(build.status, "CANONICAL_CREATED")
             before = canonical_output(root).read_bytes()
             result, _ = self.run_processing(root, event_id=EVENT_ID)
-            self.assertEqual(result.status, "CANONICAL_ONLY_RESUMED")
+            self.assertEqual(result.status, "PROCESSED_AND_INDEXED")
             self.assertEqual(canonical_output(root).read_bytes(), before)
             self.assertEqual(
                 result.commit_paths,
                 (
                     f"data/analysis/cpi/{EVENT_ID}/cpi-analysis-v1.json",
                     f"docs/reports/{EVENT_ID}.html",
+                    "docs/index.html",
                 ),
             )
 
@@ -192,8 +201,11 @@ class RunPendingCpiProcessingTests(unittest.TestCase):
             processed = process_cpi_release.process_release(root, EVENT_ID, now=NOW)
             self.assertEqual(processed.status, "PROCESSED")
             result, _ = self.run_processing(root, event_id=EVENT_ID)
-            self.assertEqual(result.status, "REPORT_ONLY_RESUMED")
-            self.assertEqual(result.commit_paths, (f"docs/reports/{EVENT_ID}.html",))
+            self.assertEqual(result.status, "REPORT_ONLY_RESUMED_AND_INDEXED")
+            self.assertEqual(
+                result.commit_paths,
+                (f"docs/reports/{EVENT_ID}.html", "docs/index.html"),
+            )
 
     def test_13_all_existing_valid_files_return_already_processed(self):
         with self.temp_root(release=True) as root:
@@ -269,8 +281,8 @@ class RunPendingCpiProcessingTests(unittest.TestCase):
     def test_19_commit_paths_have_at_most_three_files(self):
         with self.temp_root(release=True) as root:
             result, _ = self.run_processing(root)
-            self.assertLessEqual(len(result.commit_paths), 3)
-            self.assertEqual(len(result.commit_paths), 3)
+            self.assertLessEqual(len(result.commit_paths), 4)
+            self.assertEqual(len(result.commit_paths), 4)
 
     def test_20_commit_paths_only_use_allowed_derivatives(self):
         with self.temp_root(release=True) as root:
@@ -363,9 +375,100 @@ class RunPendingCpiProcessingTests(unittest.TestCase):
         before = [path.read_bytes() if path.exists() else None for path in actual_paths]
         with self.temp_root(release=True) as root:
             result, _ = self.run_processing(root)
-            self.assertEqual(result.status, "PROCESSED")
+            self.assertEqual(result.status, "PROCESSED_AND_INDEXED")
         after = [path.read_bytes() if path.exists() else None for path in actual_paths]
         self.assertEqual(after, before)
+
+    def test_30_report_creation_registers_index(self):
+        with self.temp_root(release=True) as root:
+            result, _ = self.run_processing(root)
+            index = (root / "docs" / "index.html").read_text(encoding="utf-8")
+            self.assertEqual(result.status, "PROCESSED_AND_INDEXED")
+            self.assertEqual(result.index["status"], "updated")
+            self.assertIn('href="reports/US_CPI_2026_06.html"', index)
+
+    def test_31_full_new_generation_is_processed_and_indexed(self):
+        with self.temp_root(release=True) as root:
+            result, exit_code = self.run_processing(root)
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(result.status, "PROCESSED_AND_INDEXED")
+            self.assertEqual(len(result.commit_paths), 4)
+
+    def test_32_existing_report_without_index_is_index_only_resumed(self):
+        with self.temp_root(release=True) as root:
+            processed = process_cpi_release.process_release(root, EVENT_ID, now=NOW)
+            self.assertEqual(processed.status, "PROCESSED")
+            rendered = build_cpi_release_report.build_report(root, EVENT_ID)
+            self.assertEqual(rendered.status, "REPORT_CREATED")
+            result, _ = self.run_processing(root, event_id=EVENT_ID)
+            self.assertEqual(result.status, "INDEX_ONLY_RESUMED")
+            self.assertEqual(result.commit_paths, ("docs/index.html",))
+
+    def test_33_index_failure_clears_commit_paths(self):
+        with self.temp_root(release=True) as root:
+            failed_index = update_report_index._result("INDEX_UPDATE_FAILED")
+            result, exit_code = self.run_processing(
+                root,
+                index_func=lambda *_args, **_kwargs: failed_index,
+            )
+            self.assertEqual(exit_code, 1)
+            self.assertEqual(result.status, "INDEX_UPDATE_FAILED")
+            self.assertEqual(result.commit_paths, ())
+            self.assertTrue(report_output(root).exists())
+
+    def test_34_index_change_expands_commit_paths_to_four(self):
+        with self.temp_root(release=True) as root:
+            result, _ = self.run_processing(root)
+            self.assertEqual(len(result.commit_paths), 4)
+            self.assertIn("docs/index.html", result.commit_paths)
+
+    def test_35_unchanged_index_is_not_committed_again(self):
+        with self.temp_root(release=True) as root:
+            self.prepare_all(root)
+            result, _ = self.run_processing(root, event_id=EVENT_ID, result_name="already-indexed.json")
+            self.assertEqual(result.status, "ALREADY_PROCESSED")
+            self.assertNotIn("docs/index.html", result.commit_paths)
+
+    def test_36_other_docs_path_rejects_the_whole_commit_list(self):
+        with self.temp_root(release=True) as root:
+            result, _ = self.run_processing(root)
+            extra = root / "docs" / "other.html"
+            extra.write_text("other\n", encoding="utf-8")
+            with self.assertRaises(run_pending_cpi_processing.PendingProcessingError):
+                run_pending_cpi_processing.validate_commit_paths(
+                    root,
+                    EVENT_ID,
+                    list(result.commit_paths) + ["docs/other.html"],
+                )
+
+    def test_37_existing_derivatives_survive_index_failure(self):
+        with self.temp_root(release=True) as root:
+            processed = process_cpi_release.process_release(root, EVENT_ID, now=NOW)
+            self.assertEqual(processed.status, "PROCESSED")
+            rendered = build_cpi_release_report.build_report(root, EVENT_ID)
+            self.assertEqual(rendered.status, "REPORT_CREATED")
+            paths = (canonical_output(root), analysis_output(root), report_output(root))
+            before = [path.read_bytes() for path in paths]
+            failed_index = update_report_index._result("INDEX_UPDATE_FAILED")
+            result, _ = self.run_processing(
+                root,
+                event_id=EVENT_ID,
+                index_func=lambda *_args, **_kwargs: failed_index,
+            )
+            self.assertEqual(result.status, "INDEX_UPDATE_FAILED")
+            self.assertEqual(result.commit_paths, ())
+            self.assertEqual(before, [path.read_bytes() for path in paths])
+
+    def test_38_index_integration_keeps_external_api_disabled(self):
+        with self.temp_root(release=True) as root:
+            result, _ = self.run_processing(root)
+            self.assertFalse(result.external_api_called)
+            self.assertEqual(result.provider, "rule_based")
+
+    def test_39_index_integration_cost_mode_is_free(self):
+        with self.temp_root(release=True) as root:
+            result, _ = self.run_processing(root)
+            self.assertEqual(result.cost_mode, "free")
 
 
 if __name__ == "__main__":

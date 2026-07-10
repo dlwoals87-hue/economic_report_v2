@@ -93,9 +93,10 @@ jobs:
           commit_paths = result.get("commit_paths") or []
           no_commit_statuses = {"NO_PENDING_EVENT", "ALREADY_PROCESSED"}
           commit_statuses = {
-              "PROCESSED",
-              "CANONICAL_ONLY_RESUMED",
+              "PROCESSED_AND_INDEXED",
+              "REPORT_ONLY_RESUMED_AND_INDEXED",
               "REPORT_ONLY_RESUMED",
+              "INDEX_ONLY_RESUMED",
           }
           allowed_statuses = no_commit_statuses | commit_statuses
           zero_usage = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
@@ -124,8 +125,8 @@ jobs:
           if status in commit_statuses:
               if not isinstance(event_id, str) or not re.fullmatch(r"[A-Z0-9_]+", event_id):
                   raise SystemExit("committable result has invalid event_id")
-              if not 1 <= len(commit_paths) <= 3:
-                  raise SystemExit("committable result must contain one to three paths")
+              if not 1 <= len(commit_paths) <= 4:
+                  raise SystemExit("committable result must contain one to four paths")
               if created_paths != commit_paths:
                   raise SystemExit("created_paths and commit_paths must match exactly")
           if len(commit_paths) != len(set(commit_paths)):
@@ -135,6 +136,7 @@ jobs:
               f"data/generated/cpi/{event_id}/canonical_release.json",
               f"data/analysis/cpi/{event_id}/cpi-analysis-v1.json",
               f"docs/reports/{event_id}.html",
+              "docs/index.html",
           } if event_id else set()
           for item in commit_paths:
               if not isinstance(item, str) or not item or "\\" in item:
@@ -156,6 +158,7 @@ jobs:
               "canonical": f"data/generated/cpi/{event_id}/canonical_release.json",
               "analysis": f"data/analysis/cpi/{event_id}/cpi-analysis-v1.json",
               "report": f"docs/reports/{event_id}.html",
+              "index": "docs/index.html",
           } if event_id else {}
           for name, expected_path in artifact_paths.items():
               artifact = result.get(name)
@@ -216,13 +219,14 @@ jobs:
               f"data/generated/cpi/{event_id}/canonical_release.json",
               f"data/analysis/cpi/{event_id}/cpi-analysis-v1.json",
               f"docs/reports/{event_id}.html",
+              "docs/index.html",
           }
           secret_value = re.compile(
               rb"(?:sk-[A-Za-z0-9_-]{16,}|ghp_[A-Za-z0-9]{20,})"
           )
 
-          if not 1 <= len(expected) <= 3 or not 1 <= len(staged) <= 3:
-              raise SystemExit("staged path count must be one to three")
+          if not 1 <= len(expected) <= 4 or not 1 <= len(staged) <= 4:
+              raise SystemExit("staged path count must be one to four")
           if len(staged) != len(set(staged)):
               raise SystemExit("duplicate staged paths")
           if set(staged) != set(expected):
@@ -236,8 +240,11 @@ jobs:
           if len(statuses) != len(staged):
               raise SystemExit("staged status count mismatch")
           for status_code, item in statuses:
-              if status_code != "A":
-                  raise SystemExit(f"only newly added files may be committed: {item}")
+              if item == "docs/index.html":
+                  if status_code != "M":
+                      raise SystemExit(f"index must be an existing modified file: {item}")
+              elif status_code != "A":
+                  raise SystemExit(f"only newly added derivatives may be committed: {item}")
           for item in staged:
               pure = PurePosixPath(item)
               if pure.is_absolute() or ".." in pure.parts or "\\" in item:

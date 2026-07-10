@@ -118,9 +118,10 @@ class GitHubCpiProcessingWorkflowTests(unittest.TestCase):
         validation = self.step_block("Validate processing result")
         commit = self.step_block("Commit processed CPI report")
         for status in (
-            "PROCESSED",
-            "CANONICAL_ONLY_RESUMED",
+            "PROCESSED_AND_INDEXED",
+            "REPORT_ONLY_RESUMED_AND_INDEXED",
             "REPORT_ONLY_RESUMED",
+            "INDEX_ONLY_RESUMED",
         ):
             self.assertIn(f'"{status}"', validation)
         self.assertIn('{"NO_PENDING_EVENT", "ALREADY_PROCESSED"}', validation)
@@ -141,10 +142,10 @@ class GitHubCpiProcessingWorkflowTests(unittest.TestCase):
         self.assertLess(commit.index("git add --"), commit.index("git diff --cached --name-only"))
         self.assertLess(commit.index("git diff --cached --name-only"), commit.index("git commit -m"))
 
-    def test_27_automatic_commit_is_limited_to_three_files(self):
-        self.assertIn("1 <= len(commit_paths) <= 3", self.text)
-        self.assertIn("1 <= len(expected) <= 3", self.text)
-        self.assertIn("1 <= len(staged) <= 3", self.text)
+    def test_27_automatic_commit_is_limited_to_four_files(self):
+        self.assertIn("1 <= len(commit_paths) <= 4", self.text)
+        self.assertIn("1 <= len(expected) <= 4", self.text)
+        self.assertIn("1 <= len(staged) <= 4", self.text)
 
     def test_28_force_push_is_absent(self):
         self.assertNotIn("--force", self.text)
@@ -169,10 +170,29 @@ class GitHubCpiProcessingWorkflowTests(unittest.TestCase):
         ):
             self.assertNotIn(marker, self.text)
 
-    def test_31_docs_index_is_not_modified(self):
-        self.assertNotIn("docs/index.html", self.text)
+    def test_31_only_docs_index_is_allowed_for_index_updates(self):
+        self.assertIn('"docs/index.html",', self.text)
         allowed = self.step_block("Validate processing result")
-        self.assertNotIn('f"docs/index', allowed)
+        self.assertIn('"docs/index.html",', allowed)
+        self.assertNotIn('"docs/other.html"', allowed)
+
+    def test_32_other_docs_paths_are_not_allowed(self):
+        validation = self.step_block("Validate processing result")
+        staged = self.step_block("Commit processed CPI report")
+        self.assertIn("if item not in allowed", validation)
+        self.assertIn("if item not in allowed", staged)
+        self.assertNotIn("docs/*.html", validation)
+
+    def test_33_index_is_the_only_existing_modified_stage_path(self):
+        commit = self.step_block("Commit processed CPI report")
+        self.assertIn('if item == "docs/index.html":', commit)
+        self.assertIn('if status_code != "M":', commit)
+        self.assertIn('elif status_code != "A":', commit)
+
+    def test_34_index_artifact_is_hash_checked(self):
+        validation = self.step_block("Validate processing result")
+        self.assertIn('"index": "docs/index.html"', validation)
+        self.assertIn("artifact SHA-256 mismatch", validation)
 
 
 if __name__ == "__main__":
