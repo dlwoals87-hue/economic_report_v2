@@ -266,6 +266,30 @@ class OpenAIResponsesTests(unittest.TestCase):
         self.assertEqual(caught.exception.code, "OPENAI_API_KEY_MISSING")
         self.assertEqual(caught.exception.attempts, 0)
 
+    def test_common_provider_adapter_preserves_openai_metadata(self):
+        legacy = openai_responses.OpenAIResponseResult(
+            output={"language": "ko"},
+            response_id="resp_adapter_test",
+            model_requested="gpt-test-requested",
+            model_returned="gpt-test-returned",
+            usage={"input_tokens": 1, "output_tokens": 2, "total_tokens": 3},
+            api_calls=1,
+        )
+        with mock.patch.object(
+            openai_responses,
+            "generate_structured_analysis",
+            return_value=legacy,
+        ):
+            result = openai_responses.generate_analysis(
+                facts=self.facts,
+                instructions=self.instructions,
+                schema=self.schema,
+            )
+        self.assertEqual(result.provider_name, "openai")
+        self.assertEqual(result.analysis, {"language": "ko"})
+        self.assertTrue(result.external_api_called)
+        self.assertEqual(result.response_id, "resp_adapter_test")
+
 
 if __name__ == "__main__":
     unittest.main()

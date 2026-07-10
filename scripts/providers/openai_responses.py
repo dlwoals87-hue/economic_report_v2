@@ -9,6 +9,8 @@ import urllib.request
 from dataclasses import dataclass
 from typing import Any, Callable
 
+from scripts.providers.base import AnalysisProviderError, AnalysisProviderResult
+
 
 RESPONSES_ENDPOINT = "https://api.openai.com/v1/responses"
 DEFAULT_MODEL = "gpt-5.6-sol"
@@ -295,4 +297,39 @@ def generate_structured_analysis(
         "TRANSIENT_API_ERROR",
         "maximum API attempts reached",
         attempts=attempts,
+    )
+
+
+def generate_analysis(
+    *,
+    facts: dict[str, Any],
+    instructions: str,
+    schema: dict[str, Any],
+) -> AnalysisProviderResult:
+    """Adapt the optional paid OpenAI provider to the common provider contract."""
+    try:
+        result = generate_structured_analysis(
+            facts=facts,
+            instructions=instructions,
+            schema=schema,
+        )
+    except OpenAIResponsesError as exc:
+        raise AnalysisProviderError(
+            exc.code,
+            exc.message,
+            external_api_called=exc.attempts > 0,
+            api_calls=exc.attempts,
+            model_requested=configured_model(),
+        ) from exc
+    return AnalysisProviderResult(
+        provider_name="openai",
+        model_requested=result.model_requested,
+        model_returned=result.model_returned,
+        response_id=result.response_id,
+        analysis=result.output,
+        usage=result.usage,
+        external_api_called=result.api_calls > 0,
+        fallback_used=False,
+        fallback_reason=None,
+        api_calls=result.api_calls,
     )

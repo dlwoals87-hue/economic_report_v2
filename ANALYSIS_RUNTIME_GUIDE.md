@@ -1,83 +1,98 @@
-# OpenAI 경제 해석 운영 안내서
+# 경제 해석 운영 안내서
 
 ## 1. 이 기능이 하는 일
 
-발표 후 생성되는 CPI `canonical_release.json`을 검증하고, 결정적 수치 사실을 Python으로 계산한 뒤 OpenAI Responses API에 해석을 요청한다. 응답은 다시 검증하여 감사 정보가 포함된 `cpi-analysis-v1.json`으로 저장한다.
+발표 후 생성되는 CPI `canonical_release.json`을 검증하고, 결정적 수치 사실을 Python으로 계산한 뒤 선택된 provider가 해석을 만든다. 기본 provider는 외부 API를 사용하지 않는 `rule_based`다. 모든 결과는 동일한 스키마와 정확성 검증을 통과한 뒤 `cpi-analysis-v1.json`으로 저장된다.
 
-## 2. AI가 하는 일과 하지 않는 일
+## 2. provider 우선순위
 
-AI가 하는 일:
+선택 우선순위는 다음과 같다.
 
-- 수치 의미 해석
-- 직전 발표 대비 흐름 설명
-- 정책 시사점 작성
-- 근거와 한계 정리
+1. CLI의 `--provider`
+2. 환경변수 `ANALYSIS_PROVIDER`
+3. `rule_based`
 
-AI가 하지 않는 일:
+지원값은 `rule_based`, `github_models`, `openai`다. `OPENAI_API_KEY`가 있어도 OpenAI가 자동 선택되지는 않는다.
 
-- 실제값 계산
-- surprise 계산
-- 시장가격 수집
-- 없는 숫자 생성
-- 투자 조언
-
-## 3. 사용하는 API
-
-- OpenAI Responses API
-- Structured Outputs의 엄격한 JSON Schema
-- 응답 저장을 끄는 `store: false`
-- 웹 검색, 파일 검색, 함수 호출 등 외부 도구 미사용
-
-## 4. 사용하는 모델
-
-- 기본 모델: `gpt-5.6-sol`
-- 정확성 우선 설정: `reasoning.effort`는 `high`
-- 모델을 바꿀 때는 실행 환경의 `OPENAI_MODEL` 값만 변경한다.
-- 기본 모델 문자열은 `scripts/providers/openai_responses.py` 한 곳에서 관리한다.
-
-## 5. API 키
-
-- 환경변수 이름: `OPENAI_API_KEY`
-- 키를 코드, JSON, 로그, HTML, GitHub 파일에 직접 입력하지 않는다.
-- 실제 운영 연결 단계에서 로컬 환경변수 또는 GitHub Secrets로 설정한다.
-- canonical 파일이 없으면 키 존재 여부를 확인하지 않는다.
-
-## 6. 실행 전 필요한 파일
-
-기본 입력은 다음 경로의 발표 canonical 파일이다.
-
-`data/generated/cpi/{event_id}/canonical_release.json`
-
-실행 예:
+비용 없이 실행하는 권장 명령:
 
 ```powershell
-python scripts/analysis/generate_cpi_analysis.py --event-id US_CPI_2026_06
+python scripts/analysis/generate_cpi_analysis.py --event-id US_CPI_2026_06 --provider rule_based
 ```
+
+## 3. AI와 Python의 역할
+
+Python이 하는 일:
+
+- 실제값과 직전값의 결정적 매핑
+- 변화량과 momentum 방향 계산
+- surprise 재검산
+- evidence path, 숫자, 시장 반응 표현 검증
+
+provider가 하는 일:
+
+- 검증된 facts를 한국어 해석 구조로 변환
+- 정책 신호와 근거 및 한계 정리
+
+provider는 facts를 수정하거나 없는 숫자를 만들 수 없다.
+
+## 4. rule_based
+
+- 기본 provider
+- 외부 API 호출 0회
+- API 키와 토큰 불필요
+- actual, previous, momentum, surprise를 정해진 규칙으로 해석
+- 기존 AI 결과와 동일한 엄격 스키마 및 후검증 적용
+- 비용 0원 운영을 보장하려면 `--provider rule_based`를 사용
+
+## 5. github_models
+
+`github_models`는 무료 AI 연결을 위한 선택 구조다. endpoint와 모델은 운영 환경에서 다음 변수로 명시해야 하며 코드에 임의 기본값을 두지 않는다.
+
+- `GITHUB_TOKEN`
+- `GITHUB_MODELS_MODEL`
+- `GITHUB_MODELS_ENDPOINT`
+
+현재 단계는 요청 생성, 응답 파싱, mock transport까지만 구현하며 실제 통신은 활성화하지 않는다. 토큰, 구성, 무료 한도, 네트워크, 모델, 응답 검증 문제가 있으면 기본적으로 `rule_based`로 전환한다.
+
+## 6. 선택적 OpenAI
+
+OpenAI Responses API 구현은 선택 기능으로 유지한다. 다음 두 조건이 모두 충족돼야 호출 경로에 들어간다.
+
+1. `--provider openai` 또는 `ANALYSIS_PROVIDER=openai`
+2. `OPENAI_API_KEY` 존재
+
+키가 있다는 이유만으로 자동 선택하지 않는다. 키가 없으면 기본 설정에서는 결제나 키 발급을 요구하지 않고 `rule_based`로 전환한다. OpenAI 모델은 `OPENAI_MODEL`로 변경할 수 있다.
+
+## 7. fallback
+
+`--allow-rule-fallback`은 기본 활성화 상태다. 외부 provider 실패 시 최종 결과의 provider 메타데이터에 요청 provider, 실제 사용 provider, 외부 호출 여부, fallback 사유를 기록한다.
+
+fallback을 명시적으로 끄려면 다음 옵션을 사용한다.
+
+```powershell
+--no-rule-fallback
+```
+
+## 8. 실행 전 필요한 파일
+
+기본 입력:
+
+`data/generated/cpi/{event_id}/canonical_release.json`
 
 기본 출력:
 
 `data/analysis/cpi/{event_id}/cpi-analysis-v1.json`
 
-## 7. 상태별 의미
+canonical 파일이 없으면 `CANONICAL_RELEASE_NOT_FOUND`로 정상 대기하며 provider 호출, 키 확인, 출력 생성이 모두 발생하지 않는다.
 
-- `CANONICAL_RELEASE_NOT_FOUND`: 발표 canonical 파일이 없어 정상 대기한다. API 호출과 키 확인은 없다.
-- `OPENAI_API_KEY_MISSING`: canonical 검증 후 실제 호출 시점에 키가 없다.
-- `ALREADY_ANALYZED`: 같은 버전의 분석 파일이 이미 있어 호출하거나 덮어쓰지 않는다.
-- `MODEL_REFUSAL`: 모델이 요청을 거부했으며 파일을 만들지 않는다.
-- `RATE_LIMITED`: API 호출 제한 응답을 받았다. 최대 한 번만 재시도한다.
-- `ANALYSIS_GENERATED`: 검증과 저장이 모두 완료됐다.
+## 9. 분석 파일의 감사 정보
 
-## 8. 분석 파일의 감사 정보
+분석 파일에는 canonical, 프롬프트, 스키마 SHA-256과 요청 provider, 실제 provider, 모델, 응답 ID, 외부 호출 여부, fallback 사유, 토큰 사용량을 기록한다. 키, 토큰, Authorization 헤더, 전체 원본 API 응답, 모델 내부 reasoning은 저장하지 않는다.
 
-분석 파일에는 canonical, 프롬프트, 스키마의 SHA-256과 요청/반환 모델, 응답 ID, 토큰 사용량을 기록한다. API 키, Authorization 헤더, 전체 원본 API 응답, 모델 내부 reasoning은 기록하지 않는다.
+## 10. 비용과 보안
 
-## 9. 프롬프트 변경 방법
-
-기존 v1 프롬프트와 결과를 덮어쓰지 않는다. 동작을 변경할 때는 v2 프롬프트, v2 스키마, 새 `analysis_version`, 새 출력 파일명을 함께 만든다. 같은 버전을 강제로 덮어쓰는 옵션은 사용하지 않는다.
-
-## 10. 비용·보안 주의
-
-- 실제 API 호출에는 비용이 발생한다.
-- 키와 Authorization 헤더를 로그나 저장소에 올리지 않는다.
-- 실행 전 모델과 예상 사용량을 확인한다.
-- 429 및 일시적 서버 오류만 한 번 재시도하므로 총 호출은 최대 두 번이다.
+- 자동화의 권장 기본은 `rule_based`다.
+- 유료 OpenAI는 명시적으로 선택하기 전에는 호출되지 않는다.
+- 키와 토큰을 로그, JSON, HTML, 저장소에 기록하지 않는다.
+- 외부 provider를 선택할 때는 무료 한도와 실제 사용량을 별도로 확인한다.

@@ -18,13 +18,19 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts.providers import openai_responses  # noqa: E402
+from scripts.providers import github_models, openai_responses, rule_based  # noqa: E402
+from scripts.providers.base import (  # noqa: E402
+    AnalysisProviderError,
+    AnalysisProviderResult,
+    zero_usage,
+)
 
 
 ANALYSIS_VERSION = "cpi-analysis-v1"
 SCHEMA_VERSION = "1.0"
 PROMPT_NAME = "cpi_analysis_v1"
 SCHEMA_NAME = "cpi_analysis_v1"
+SUPPORTED_PROVIDERS = ("rule_based", "github_models", "openai")
 METRIC_PATHS = {
     "headline_mom": ("headline", "mom"),
     "headline_yoy": ("headline", "yoy"),
@@ -86,10 +92,25 @@ class AnalysisResult:
     analysis_created: bool
     api_calls: int
     api_key_checked: bool
+    requested_provider: str
+    provider_name: str | None
+    external_api_called: bool
+    fallback_used: bool
+    fallback_reason: str | None
 
 
 def project_root() -> Path:
     return PROJECT_ROOT
+
+
+def select_provider(cli_provider: str | None = None) -> str:
+    selected = cli_provider or os.environ.get("ANALYSIS_PROVIDER") or "rule_based"
+    if selected not in SUPPORTED_PROVIDERS:
+        raise CpiAnalysisError(
+            "UNKNOWN_ANALYSIS_PROVIDER",
+            f"provider must be one of: {', '.join(SUPPORTED_PROVIDERS)}",
+        )
+    return selected
 
 
 def _reject_parent_parts(path: PurePath, label: str) -> None:
@@ -516,16 +537,147 @@ def _write_new_json(path: Path, payload: dict[str, Any]) -> None:
             temp_path.unlink()
 
 
+def _provider_callable(provider_name: str) -> Callable[..., AnalysisProviderResult]:
+    return {
+        "rule_based": rule_based.generate_analysis,
+        "github_models": github_models.generate_analysis,
+        "openai": openai_responses.generate_analysis,
+    }[provider_name]
+
+
+def _normalize_provider_result(value: Any, requested_provider: str) -> AnalysisProviderResult:
+    if isinstance(value, AnalysisProviderResult):
+        return value
+    if isinstance(value, openai_responses.OpenAIResponseResult):
+        return AnalysisProviderResult(
+            provider_name="openai",
+            model_requested=value.model_requested,
+            model_returned=value.model_returned,
+            response_id=value.response_id,
+            analysis=value.output,
+            usage=value.usage,
+            external_api_called=value.api_calls > 0,
+            fallback_used=False,
+            fallback_reason=None,
+            api_calls=value.api_calls,
+        )
+    raise AnalysisProviderError(
+        "INVALID_PROVIDER_RESULT",
+        f"{requested_provider} returned an invalid provider result",
+    )
+
+
+def _fallback_to_rule_based(
+    *,
+    facts: dict[str, Any],
+    schema: dict[str, Any],
+    instructions: str,
+    reason: str,
+    external_api_called: bool,
+    api_calls: int,
+    model_requested: str | None,
+) -> tuple[AnalysisProviderResult, dict[str, Any], dict[str, bool]]:
+    fallback = rule_based.generate_analysis(
+        facts=copy.deepcopy(facts),
+        instructions=instructions,
+        schema=schema,
+    )
+    analysis = copy.deepcopy(fallback.analysis)
+    validation = validate_analysis_output(analysis, schema, facts)
+    result = AnalysisProviderResult(
+        provider_name="rule_based",
+        model_requested=model_requested,
+        model_returned=None,
+        response_id=None,
+        analysis=analysis,
+        usage=zero_usage(),
+        external_api_called=external_api_called,
+        fallback_used=True,
+        fallback_reason=reason,
+        api_calls=api_calls,
+    )
+    return result, analysis, validation
+
+
+def _run_selected_provider(
+    *,
+    requested_provider: str,
+    facts: dict[str, Any],
+    instructions: str,
+    schema: dict[str, Any],
+    allow_rule_fallback: bool,
+    provider_call: Callable[..., Any] | None,
+) -> tuple[AnalysisProviderResult, dict[str, Any], dict[str, bool]]:
+    call = provider_call or _provider_callable(requested_provider)
+    provider_result: AnalysisProviderResult | None = None
+    try:
+        raw_result = call(
+            facts=copy.deepcopy(facts),
+            instructions=instructions,
+            schema=schema,
+        )
+        provider_result = _normalize_provider_result(raw_result, requested_provider)
+        analysis = copy.deepcopy(provider_result.analysis)
+        validation = validate_analysis_output(analysis, schema, facts)
+        return provider_result, analysis, validation
+    except openai_responses.OpenAIResponsesError as exc:
+        error = AnalysisProviderError(
+            exc.code,
+            exc.message,
+            external_api_called=exc.attempts > 0,
+            api_calls=exc.attempts,
+            model_requested=openai_responses.configured_model(),
+        )
+        if requested_provider != "rule_based" and allow_rule_fallback:
+            return _fallback_to_rule_based(
+                facts=facts,
+                schema=schema,
+                instructions=instructions,
+                reason=error.code,
+                external_api_called=error.external_api_called,
+                api_calls=error.api_calls,
+                model_requested=error.model_requested,
+            )
+        raise error from exc
+    except AnalysisProviderError as exc:
+        if requested_provider != "rule_based" and allow_rule_fallback:
+            return _fallback_to_rule_based(
+                facts=facts,
+                schema=schema,
+                instructions=instructions,
+                reason=exc.code,
+                external_api_called=exc.external_api_called,
+                api_calls=exc.api_calls,
+                model_requested=exc.model_requested,
+            )
+        raise
+    except CpiAnalysisError as exc:
+        if requested_provider != "rule_based" and allow_rule_fallback and provider_result is not None:
+            return _fallback_to_rule_based(
+                facts=facts,
+                schema=schema,
+                instructions=instructions,
+                reason=exc.code,
+                external_api_called=provider_result.external_api_called,
+                api_calls=provider_result.api_calls,
+                model_requested=provider_result.model_requested,
+            )
+        raise
+
+
 def analyze_from_files(
     root: Path,
     event_id: str,
     *,
     input_path: str | None = None,
     output_path: str | None = None,
-    provider_call: Callable[..., openai_responses.OpenAIResponseResult] | None = None,
+    provider_name: str | None = None,
+    allow_rule_fallback: bool = True,
+    provider_call: Callable[..., Any] | None = None,
     now_fn: Callable[[], datetime] | None = None,
 ) -> AnalysisResult:
     root = root.resolve()
+    requested_provider = select_provider(provider_name)
     default_input = Path("data") / "generated" / "cpi" / event_id / "canonical_release.json"
     default_output = Path("data") / "analysis" / "cpi" / event_id / f"{ANALYSIS_VERSION}.json"
     canonical_path = _resolve_project_path(root, input_path, default_input, "--input")
@@ -543,6 +695,11 @@ def analyze_from_files(
             analysis_created=False,
             api_calls=0,
             api_key_checked=False,
+            requested_provider=requested_provider,
+            provider_name=None,
+            external_api_called=False,
+            fallback_used=False,
+            fallback_reason=None,
         )
     if analysis_path.exists():
         return AnalysisResult(
@@ -554,6 +711,11 @@ def analyze_from_files(
             analysis_created=False,
             api_calls=0,
             api_key_checked=False,
+            requested_provider=requested_provider,
+            provider_name=None,
+            external_api_called=False,
+            fallback_used=False,
+            fallback_reason=None,
         )
 
     try:
@@ -574,10 +736,14 @@ def analyze_from_files(
         raise CpiAnalysisError("FILE_READ_ERROR", "prompt or schema could not be read") from exc
     schema = _read_json_bytes(schema_path, schema_bytes, "cpi_analysis_v1.schema.json")
 
-    call = provider_call or openai_responses.generate_structured_analysis
-    provider_result = call(facts=copy.deepcopy(facts), instructions=prompt, schema=schema)
-    analysis = copy.deepcopy(provider_result.output)
-    validation = validate_analysis_output(analysis, schema, facts)
+    provider_result, analysis, validation = _run_selected_provider(
+        requested_provider=requested_provider,
+        facts=facts,
+        instructions=prompt,
+        schema=schema,
+        allow_rule_fallback=allow_rule_fallback,
+        provider_call=provider_call,
+    )
 
     now = now_fn() if now_fn is not None else datetime.now(timezone.utc)
     wrapper = {
@@ -592,13 +758,14 @@ def analyze_from_files(
             "release_capture_sha256": canonical["source"]["release_capture_sha256"],
         },
         "provider": {
-            "name": "openai",
-            "api": "responses",
+            "name": provider_result.provider_name,
+            "requested_provider": requested_provider,
             "model_requested": provider_result.model_requested,
             "model_returned": provider_result.model_returned,
             "response_id": provider_result.response_id,
-            "reasoning_effort": openai_responses.REASONING_EFFORT,
-            "store": False,
+            "external_api_called": provider_result.external_api_called,
+            "fallback_used": provider_result.fallback_used,
+            "fallback_reason": provider_result.fallback_reason,
         },
         "versions": {
             "prompt": PROMPT_NAME,
@@ -621,7 +788,12 @@ def analyze_from_files(
         canonical_exists=True,
         analysis_created=True,
         api_calls=provider_result.api_calls,
-        api_key_checked=True,
+        api_key_checked=requested_provider == "openai",
+        requested_provider=requested_provider,
+        provider_name=provider_result.provider_name,
+        external_api_called=provider_result.external_api_called,
+        fallback_used=provider_result.fallback_used,
+        fallback_reason=provider_result.fallback_reason,
     )
 
 
@@ -630,6 +802,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--event-id", required=True)
     parser.add_argument("--input")
     parser.add_argument("--output")
+    parser.add_argument("--provider", choices=SUPPORTED_PROVIDERS)
+    fallback_group = parser.add_mutually_exclusive_group()
+    fallback_group.add_argument(
+        "--allow-rule-fallback",
+        dest="allow_rule_fallback",
+        action="store_true",
+        default=True,
+    )
+    fallback_group.add_argument(
+        "--no-rule-fallback",
+        dest="allow_rule_fallback",
+        action="store_false",
+    )
     return parser.parse_args(argv)
 
 
@@ -641,16 +826,19 @@ def main(argv: list[str] | None = None) -> int:
             args.event_id,
             input_path=args.input,
             output_path=args.output,
+            provider_name=args.provider,
+            allow_rule_fallback=args.allow_rule_fallback,
         )
     except CpiAnalysisError as exc:
         print(exc.code)
         print(f"error: {exc.message}")
-        print("OpenAI API calls: 0")
+        print("External API calls: 0")
         return 1
-    except openai_responses.OpenAIResponsesError as exc:
+    except AnalysisProviderError as exc:
         print(exc.code)
         print(f"error: {exc.message}")
-        print(f"OpenAI API calls: {exc.attempts}")
+        print(f"External API calls: {exc.api_calls}")
+        print(f"External API called: {str(exc.external_api_called).lower()}")
         return 1
 
     print(result.status)
@@ -659,7 +847,12 @@ def main(argv: list[str] | None = None) -> int:
     print(f"canonical_exists: {str(result.canonical_exists).lower()}")
     print(f"output: {result.output_path}")
     print(f"analysis_created: {str(result.analysis_created).lower()}")
-    print(f"OpenAI API calls: {result.api_calls}")
+    print(f"requested_provider: {result.requested_provider}")
+    print(f"provider_used: {result.provider_name or 'none'}")
+    print(f"fallback_used: {str(result.fallback_used).lower()}")
+    print(f"fallback_reason: {result.fallback_reason or 'none'}")
+    print(f"External API calls: {result.api_calls}")
+    print(f"External API called: {str(result.external_api_called).lower()}")
     print(f"API key checked: {str(result.api_key_checked).lower()}")
     return 0
 

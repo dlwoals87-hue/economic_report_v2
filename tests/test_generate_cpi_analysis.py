@@ -177,9 +177,13 @@ class GenerateCpiAnalysisTests(unittest.TestCase):
 
     def run_analysis(self, root, provider=None, **kwargs):
         provider = provider or mock.Mock(return_value=provider_result())
+        provider_name = kwargs.pop("provider_name", "openai")
+        allow_rule_fallback = kwargs.pop("allow_rule_fallback", False)
         result = generate_cpi_analysis.analyze_from_files(
             root,
             EVENT_ID,
+            provider_name=provider_name,
+            allow_rule_fallback=allow_rule_fallback,
             provider_call=provider,
             now_fn=lambda: datetime(2026, 7, 14, 12, 35, tzinfo=timezone.utc),
             **kwargs,
@@ -208,10 +212,15 @@ class GenerateCpiAnalysisTests(unittest.TestCase):
 
     def test_missing_canonical_does_not_check_api_key(self):
         def case(root):
+            def guarded_get(name, default=None):
+                if name == "OPENAI_API_KEY":
+                    raise AssertionError("API key must not be checked")
+                return default
+
             with mock.patch.object(
                 generate_cpi_analysis.openai_responses.os.environ,
                 "get",
-                side_effect=AssertionError("API key must not be checked"),
+                side_effect=guarded_get,
             ):
                 result = generate_cpi_analysis.analyze_from_files(root, EVENT_ID)
             self.assertFalse(result.api_key_checked)
@@ -488,8 +497,8 @@ class GenerateCpiAnalysisTests(unittest.TestCase):
                     "MODEL_REFUSAL", "the model refused", attempts=1
                 )
             )
-            with self.assertRaises(generate_cpi_analysis.openai_responses.OpenAIResponsesError):
-                self.run_analysis(root, provider)
+            with self.assertRaises(generate_cpi_analysis.AnalysisProviderError):
+                self.run_analysis(root, provider, allow_rule_fallback=False)
             self.assertFalse(analysis_path(root).exists())
 
         self.run_temp(case)
@@ -501,8 +510,8 @@ class GenerateCpiAnalysisTests(unittest.TestCase):
                     "RATE_LIMITED", "rate limited", attempts=2
                 )
             )
-            with self.assertRaises(generate_cpi_analysis.openai_responses.OpenAIResponsesError):
-                self.run_analysis(root, provider)
+            with self.assertRaises(generate_cpi_analysis.AnalysisProviderError):
+                self.run_analysis(root, provider, allow_rule_fallback=False)
             self.assertFalse(analysis_path(root).exists())
 
         self.run_temp(case)
