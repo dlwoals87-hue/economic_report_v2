@@ -1,0 +1,254 @@
+name: Process CPI Release
+
+on:
+  workflow_run:
+    workflows:
+      - "Capture CPI Release"
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      event_id:
+        description: "Optional CPI event_id. Leave blank for automatic selection."
+        required: false
+        type: string
+      run_tests:
+        description: "Run offline processing tests before processing."
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cpi-release-processing
+  cancel-in-progress: false
+
+jobs:
+  process:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout latest main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Run offline processing tests
+        if: github.event_name == 'workflow_dispatch' && inputs.run_tests
+        run: |
+          python -B -m unittest \
+            tests/test_build_cpi_release_canonical.py \
+            tests/test_generate_cpi_analysis.py \
+            tests/test_process_cpi_release.py \
+            tests/test_build_cpi_release_report.py \
+            tests/test_run_pending_cpi_processing.py \
+            tests/test_validate_calendar_events.py
+
+      - name: Validate calendar
+        run: python scripts/validators/validate_calendar_events.py
+
+      - name: Process pending CPI release
+        env:
+          MANUAL_EVENT_ID: ${{ github.event.inputs.event_id }}
+          RESULT_JSON: ${{ runner.temp }}/cpi_processing_result.json
+        run: |
+          if [ -n "${MANUAL_EVENT_ID:-}" ]; then
+            python scripts/automation/run_pending_cpi_processing.py \
+              --event-id "$MANUAL_EVENT_ID" \
+              --result-json "$RESULT_JSON"
+          else
+            python scripts/automation/run_pending_cpi_processing.py \
+              --result-json "$RESULT_JSON"
+          fi
+
+      - name: Validate processing result
+        id: result
+        env:
+          RESULT_JSON: ${{ runner.temp }}/cpi_processing_result.json
+          COMMIT_PATHS_FILE: ${{ runner.temp }}/cpi_processing_commit_paths.txt
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          import re
+          from pathlib import Path, PurePosixPath
+
+          result_path = Path(os.environ["RESULT_JSON"])
+          result = json.loads(result_path.read_text(encoding="utf-8"))
+          status = result.get("status")
+          event_id = result.get("event_id")
+          created_paths = result.get("created_paths") or []
+          commit_paths = result.get("commit_paths") or []
+          no_commit_statuses = {"NO_PENDING_EVENT", "ALREADY_PROCESSED"}
+          commit_statuses = {
+              "PROCESSED",
+              "CANONICAL_ONLY_RESUMED",
+              "REPORT_ONLY_RESUMED",
+          }
+          allowed_statuses = no_commit_statuses | commit_statuses
+          zero_usage = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+          secret_value = re.compile(
+              rb"(?:sk-[A-Za-z0-9_-]{16,}|ghp_[A-Za-z0-9]{20,})"
+          )
+
+          print(f"status: {status}")
+          print(f"event_id: {event_id}")
+          print(f"provider: {result.get('provider')}")
+          print(f"external_api_called: {result.get('external_api_called')}")
+          print(f"commit_paths: {len(commit_paths)}")
+
+          if status not in allowed_statuses:
+              raise SystemExit(f"processing status is not committable: {status}")
+          if result.get("provider") != "rule_based":
+              raise SystemExit("processing provider must be rule_based")
+          if result.get("external_api_called") is not False:
+              raise SystemExit("external API use is forbidden")
+          if result.get("cost_mode") != "free":
+              raise SystemExit("processing cost mode must be free")
+          if result.get("usage") != zero_usage:
+              raise SystemExit("processing token usage must be zero")
+          if status in no_commit_statuses and (created_paths or commit_paths):
+              raise SystemExit("no-commit status must have empty created_paths and commit_paths")
+          if status in commit_statuses:
+              if not isinstance(event_id, str) or not re.fullmatch(r"[A-Z0-9_]+", event_id):
+                  raise SystemExit("committable result has invalid event_id")
+              if not 1 <= len(commit_paths) <= 3:
+                  raise SystemExit("committable result must contain one to three paths")
+              if created_paths != commit_paths:
+                  raise SystemExit("created_paths and commit_paths must match exactly")
+          if len(commit_paths) != len(set(commit_paths)):
+              raise SystemExit("duplicate commit paths")
+
+          allowed = {
+              f"data/generated/cpi/{event_id}/canonical_release.json",
+              f"data/analysis/cpi/{event_id}/cpi-analysis-v1.json",
+              f"docs/reports/{event_id}.html",
+          } if event_id else set()
+          for item in commit_paths:
+              if not isinstance(item, str) or not item or "\\" in item:
+                  raise SystemExit("invalid commit path")
+              pure = PurePosixPath(item)
+              if pure.is_absolute() or ".." in pure.parts:
+                  raise SystemExit(f"unsafe commit path: {item}")
+              if item not in allowed:
+                  raise SystemExit(f"commit path not allowed: {item}")
+              path = Path(item)
+              if not path.is_file():
+                  raise SystemExit(f"commit path missing: {item}")
+              if path.is_symlink():
+                  raise SystemExit(f"symlink rejected: {item}")
+              if secret_value.search(path.read_bytes()):
+                  raise SystemExit(f"credential-like value found: {item}")
+
+          artifact_paths = {
+              "canonical": f"data/generated/cpi/{event_id}/canonical_release.json",
+              "analysis": f"data/analysis/cpi/{event_id}/cpi-analysis-v1.json",
+              "report": f"docs/reports/{event_id}.html",
+          } if event_id else {}
+          for name, expected_path in artifact_paths.items():
+              artifact = result.get(name)
+              if not isinstance(artifact, dict) or artifact.get("path") != expected_path:
+                  raise SystemExit(f"{name} artifact path is invalid")
+              path = Path(expected_path)
+              if not path.is_file() or path.is_symlink():
+                  raise SystemExit(f"{name} artifact file is invalid")
+              digest = hashlib.sha256(path.read_bytes()).hexdigest()
+              if artifact.get("sha256") != digest:
+                  raise SystemExit(f"{name} artifact SHA-256 mismatch")
+
+          paths_file = Path(os.environ["COMMIT_PATHS_FILE"])
+          paths_file.write_text("\n".join(commit_paths), encoding="utf-8")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"should_commit={'true' if status in commit_statuses else 'false'}\n")
+              output.write(f"event_id={event_id or ''}\n")
+          PY
+
+      - name: Commit processed CPI report
+        if: steps.result.outputs.should_commit == 'true'
+        env:
+          COMMIT_PATHS_FILE: ${{ runner.temp }}/cpi_processing_commit_paths.txt
+          STAGED_PATHS_FILE: ${{ runner.temp }}/cpi_processing_staged_paths.txt
+          STAGED_STATUS_FILE: ${{ runner.temp }}/cpi_processing_staged_status.txt
+          EVENT_ID: ${{ steps.result.outputs.event_id }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          while IFS= read -r path; do
+            [ -n "$path" ] || continue
+            git add -- "$path"
+          done < "$COMMIT_PATHS_FILE"
+          git diff --cached --name-only > "$STAGED_PATHS_FILE"
+          git diff --cached --name-status > "$STAGED_STATUS_FILE"
+          python - <<'PY'
+          import os
+          import re
+          from pathlib import Path, PurePosixPath
+
+          expected = [
+              line.strip()
+              for line in Path(os.environ["COMMIT_PATHS_FILE"]).read_text(encoding="utf-8").splitlines()
+              if line.strip()
+          ]
+          staged = [
+              line.strip()
+              for line in Path(os.environ["STAGED_PATHS_FILE"]).read_text(encoding="utf-8").splitlines()
+              if line.strip()
+          ]
+          statuses = [
+              line.strip().split("\t", 1)
+              for line in Path(os.environ["STAGED_STATUS_FILE"]).read_text(encoding="utf-8").splitlines()
+              if line.strip()
+          ]
+          event_id = os.environ["EVENT_ID"]
+          allowed = {
+              f"data/generated/cpi/{event_id}/canonical_release.json",
+              f"data/analysis/cpi/{event_id}/cpi-analysis-v1.json",
+              f"docs/reports/{event_id}.html",
+          }
+          secret_value = re.compile(
+              rb"(?:sk-[A-Za-z0-9_-]{16,}|ghp_[A-Za-z0-9]{20,})"
+          )
+
+          if not 1 <= len(expected) <= 3 or not 1 <= len(staged) <= 3:
+              raise SystemExit("staged path count must be one to three")
+          if len(staged) != len(set(staged)):
+              raise SystemExit("duplicate staged paths")
+          if set(staged) != set(expected):
+              unexpected = sorted(set(staged) - set(expected))
+              missing = sorted(set(expected) - set(staged))
+              raise SystemExit(
+                  "staged paths do not match commit_paths; "
+                  f"unexpected staged files: {unexpected}; "
+                  f"expected paths not staged: {missing}"
+              )
+          if len(statuses) != len(staged):
+              raise SystemExit("staged status count mismatch")
+          for status_code, item in statuses:
+              if status_code != "A":
+                  raise SystemExit(f"only newly added files may be committed: {item}")
+          for item in staged:
+              pure = PurePosixPath(item)
+              if pure.is_absolute() or ".." in pure.parts or "\\" in item:
+                  raise SystemExit(f"unsafe staged path: {item}")
+              if item not in allowed:
+                  raise SystemExit(f"staged path not allowed: {item}")
+              path = Path(item)
+              if not path.is_file() or path.is_symlink():
+                  raise SystemExit(f"staged path is not a regular file: {item}")
+              if secret_value.search(path.read_bytes()):
+                  raise SystemExit(f"credential-like value found: {item}")
+          PY
+          git commit -m "report: process ${EVENT_ID} CPI release"
+          git push origin HEAD:main
