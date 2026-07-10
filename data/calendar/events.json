@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "description": "Manual economic calendar inputs. Expected values are not auto-generated.",
+  "events": [
+    {
+      "event_id": "US_CPI_2026_05",
+      "indicator_type": "CPI",
+      "country": "US",
+      "reference_period": "2026-05",
+      "release_datetime_utc": "2026-06-10T12:30:00Z",
+      "metrics": {
+        "headline_mom": {
+          "expected": null,
+          "unit": "%"
+        },
+        "headline_yoy": {
+          "expected": null,
+          "unit": "%"
+        },
+        "core_mom": {
+          "expected": null,
+          "unit": "%"
+        },
+        "core_yoy": {
+          "expected": null,
+          "unit": "%"
+        }
+      },
+      "consensus_source": null,
+      "consensus_status": "not_entered",
+      "entered_at_utc": null
+    },
+    {
+      "event_id": "US_CPI_2026_06",
+      "indicator_type": "CPI",
+      "country": "US",
+      "reference_period": "2026-06",
+      "release_datetime_utc": "2026-07-14T12:30:00Z",
+      "metrics": {
+        "headline_mom": {
+          "expected": null,
+          "unit": "%"
+        },
+        "headline_yoy": {
+          "expected": null,
+          "unit": "%"
+        },
+        "core_mom": {
+          "expected": null,
+          "unit": "%"
+        },
+        "core_yoy": {
+          "expected": null,
+          "unit": "%"
+        }
+      },
+      "consensus_source": null,
+      "consensus_status": "not_entered",
+      "entered_at_utc": null
+    }
+  ]
+}

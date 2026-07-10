@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "description": "Example only. Copy to data/calendar/events.json for manual expected inputs. Do not store API keys here.",
+  "events": [
+    {
+      "event_id": "2026-07-us-cpi",
+      "indicator_type": "CPI",
+      "country": "US",
+      "period": "2026-06",
+      "release_datetime_utc": "2026-07-15T12:30:00Z",
+      "release_timezone": "America/New_York",
+      "display_timezone": "Asia/Seoul",
+      "source_label": "manual consensus sample",
+      "source_url": "",
+      "entered_at_utc": "2026-07-10T00:00:00Z",
+      "expected": {
+        "headline_mom": {
+          "value": "0.2%",
+          "unit": "%",
+          "note": "Manual expected CPI headline MoM"
+        },
+        "headline_yoy": {
+          "value": "2.9%",
+          "unit": "%",
+          "note": "Manual expected CPI headline YoY"
+        },
+        "core_mom": {
+          "value": "0.2%",
+          "unit": "%",
+          "note": "Manual expected core CPI MoM"
+        },
+        "core_yoy": {
+          "value": "3.1%",
+          "unit": "%",
+          "note": "Manual expected core CPI YoY"
+        }
+      }
+    }
+  ]
+}

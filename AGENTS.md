@@ -5,8 +5,9 @@
 디자인 원본은 templates/sample_report_v11.html이며 이 디자인 보존이 최우선이다.
 
 ## 현재 단계
-현재는 1단계 MVP다.
-목표는 가짜 JSON 데이터를 작업용 템플릿에 치환하여 정적 HTML을 생성하는 것이다.
+현재 단계는 루트의 STAGE.md 첫 줄을 기준으로 한다.
+현재 작업 단계: 3.1
+3.1단계 목표는 BLS CPI 실제 데이터 수집기를 구현하되, canonical payload/HTML 리포트/GitHub Pages에는 아직 연결하지 않는 것이다.
 
 ## 절대 규칙
 1. templates/sample_report_v11.html은 읽기 전용 원본이다.

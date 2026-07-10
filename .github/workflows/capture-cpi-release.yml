@@ -1,0 +1,178 @@
+name: Capture CPI Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      event_id:
+        description: "Optional CPI event_id. Leave blank for automatic selection."
+        required: false
+        type: string
+      run_tests:
+        description: "Run offline tests before capture."
+        required: false
+        default: true
+        type: boolean
+  schedule:
+    - cron: "36-56/5 8 * * 1-5"
+      timezone: "America/New_York"
+    - cron: "6,21,41 9 * * 1-5"
+      timezone: "America/New_York"
+    - cron: "11 10,12 * * 1-5"
+      timezone: "America/New_York"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cpi-release-capture
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BLS_API_KEY: ${{ secrets.BLS_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Run offline tests
+        if: github.event_name == 'workflow_dispatch' && inputs.run_tests
+        run: |
+          python -B -m unittest \
+            tests/test_bls_cpi.py \
+            tests/test_capture_cpi_release.py \
+            tests/test_validate_calendar_events.py \
+            tests/test_run_due_cpi_capture.py
+
+      - name: Validate calendar
+        run: python scripts/validators/validate_calendar_events.py
+
+      - name: Capture due CPI release
+        env:
+          MANUAL_EVENT_ID: ${{ github.event.inputs.event_id }}
+          RESULT_JSON: ${{ runner.temp }}/cpi_capture_result.json
+        run: |
+          if [ -n "${MANUAL_EVENT_ID:-}" ]; then
+            python scripts/automation/run_due_cpi_capture.py \
+              --event-id "$MANUAL_EVENT_ID" \
+              --result-json "$RESULT_JSON"
+          else
+            python scripts/automation/run_due_cpi_capture.py \
+              --result-json "$RESULT_JSON"
+          fi
+
+      - name: Validate capture result
+        id: result
+        env:
+          RESULT_JSON: ${{ runner.temp }}/cpi_capture_result.json
+          COMMIT_PATHS_FILE: ${{ runner.temp }}/cpi_commit_paths.txt
+        run: |
+          python - <<'PY'
+          import fnmatch
+          import json
+          import os
+          from pathlib import Path, PurePosixPath
+
+          result_path = Path(os.environ["RESULT_JSON"])
+          result = json.loads(result_path.read_text(encoding="utf-8"))
+          status = result.get("status")
+          event_id = result.get("event_id")
+          commit_paths = result.get("commit_paths") or []
+          allowed = (
+              "data/releases/cpi/*/as_released.json",
+              "data/raw/bls/cpi/*/retrieved_*.json",
+              "data/processed/bls/cpi_latest.json",
+          )
+
+          print(f"status: {status}")
+          print(f"event_id: {event_id}")
+          print(f"captured: {result.get('captured')}")
+          print(f"api_called: {result.get('api_called')}")
+          print(f"commit_paths: {len(commit_paths)}")
+
+          if status != "CAPTURED" and commit_paths:
+              raise SystemExit("commit_paths must be empty unless status is CAPTURED")
+          if status == "CAPTURED":
+              if not commit_paths:
+                  raise SystemExit("captured result must include commit paths")
+              if len(commit_paths) > 3:
+                  raise SystemExit("too many commit paths")
+              secret = os.environ.get("BLS_API_KEY") or ""
+              for item in commit_paths:
+                  if not isinstance(item, str) or not item:
+                      raise SystemExit("invalid commit path")
+                  if "\\" in item:
+                      raise SystemExit(f"backslash path rejected: {item}")
+                  pure = PurePosixPath(item)
+                  if pure.is_absolute() or ".." in pure.parts:
+                      raise SystemExit(f"unsafe path rejected: {item}")
+                  if not any(fnmatch.fnmatchcase(item, pattern) for pattern in allowed):
+                      raise SystemExit(f"path not allowed: {item}")
+                  path = Path(item)
+                  if not path.exists():
+                      raise SystemExit(f"path does not exist: {item}")
+                  if path.is_symlink():
+                      raise SystemExit(f"symlink rejected: {item}")
+                  if secret and secret in path.read_text(encoding="utf-8", errors="ignore"):
+                      raise SystemExit(f"secret value found in file: {item}")
+
+          paths_file = Path(os.environ["COMMIT_PATHS_FILE"])
+          paths_file.write_text("\n".join(commit_paths), encoding="utf-8")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"should_commit={'true' if status == 'CAPTURED' else 'false'}\n")
+              output.write(f"event_id={event_id or ''}\n")
+          PY
+
+      - name: Commit captured release
+        if: steps.result.outputs.should_commit == 'true' && github.ref_name == 'main'
+        env:
+          COMMIT_PATHS_FILE: ${{ runner.temp }}/cpi_commit_paths.txt
+          STAGED_PATHS_FILE: ${{ runner.temp }}/cpi_staged_paths.txt
+          EVENT_ID: ${{ steps.result.outputs.event_id }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          while IFS= read -r path; do
+            [ -n "$path" ] || continue
+            git add -- "$path"
+          done < "$COMMIT_PATHS_FILE"
+          git diff --cached --name-only > "$STAGED_PATHS_FILE"
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          expected = [
+              line.strip()
+              for line in Path(os.environ["COMMIT_PATHS_FILE"]).read_text(encoding="utf-8").splitlines()
+              if line.strip()
+          ]
+          staged = [
+              line.strip()
+              for line in Path(os.environ["STAGED_PATHS_FILE"]).read_text(encoding="utf-8").splitlines()
+              if line.strip()
+          ]
+
+          if len(staged) > 3:
+              raise SystemExit("too many staged paths")
+          if len(expected) > 3:
+              raise SystemExit("too many expected paths")
+          if len(set(staged)) != len(staged):
+              raise SystemExit("duplicate staged paths")
+          if set(staged) != set(expected):
+              unexpected = sorted(set(staged) - set(expected))
+              missing = sorted(set(expected) - set(staged))
+              raise SystemExit(
+                  "staged paths do not match commit_paths; "
+                  f"unexpected staged files: {unexpected}; "
+                  f"expected paths not staged: {missing}"
+              )
+          PY
+          git commit -m "data: capture ${EVENT_ID} release"
+          git push origin HEAD:main
