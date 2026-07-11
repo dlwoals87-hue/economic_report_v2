@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from scripts.automation import lock_cpi_consensus
 from scripts.diagnostics import check_cpi_release_readiness as readiness
 
 
@@ -41,6 +42,23 @@ class CpiReleaseReadinessTests(unittest.TestCase):
         text = path.read_text(encoding="utf-8")
         self.assertIn(old, text)
         path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+    def write_locked_snapshot(self, root: Path) -> None:
+        calendar = json.loads((root / "data/calendar/events.json").read_text(encoding="utf-8"))
+        event = next(item for item in calendar["events"] if item["event_id"] == EVENT_ID)
+        snapshot_event = dict(event)
+        snapshot_event["consensus_source"] = "Trusted survey"
+        snapshot_event["consensus_status"] = "complete"
+        snapshot_event["entered_at_utc"] = "2026-07-14T11:00:00Z"
+        values = {"headline_mom": "0.3", "headline_yoy": "2.9", "core_mom": "0.2", "core_yoy": "3.1"}
+        snapshot = lock_cpi_consensus.build_snapshot(
+            snapshot_event,
+            {key: lock_cpi_consensus.parse_expected(value, key) for key, value in values.items()},
+            lock_cpi_consensus.parse_utc("2026-07-14T12:00:00Z", "locked_at_utc"),
+        )
+        path = root / "data/consensus/cpi" / EVENT_ID / "consensus_snapshot.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(snapshot, indent=2) + "\n", encoding="utf-8")
 
     def test_01_normal_project_passes(self) -> None:
         with self.temporary_project() as temp:
@@ -157,6 +175,29 @@ class CpiReleaseReadinessTests(unittest.TestCase):
     def test_22_normal_project_requires_no_external_api(self) -> None:
         with self.temporary_project() as temp:
             self.assertFalse(self.result_for(Path(temp)).external_api_required)
+
+    def test_23_locked_consensus_is_reported(self) -> None:
+        with self.temporary_project() as temp:
+            root = Path(temp)
+            self.write_locked_snapshot(root)
+            result = self.result_for(root)
+            self.assertEqual(result.status, "READINESS_PASS")
+            self.assertEqual(result.consensus, "locked")
+            self.assertIsNone(result.consensus_warning)
+
+    def test_24_not_ready_consensus_has_warning(self) -> None:
+        with self.temporary_project() as temp:
+            result = self.result_for(Path(temp))
+            self.assertEqual(result.consensus, "not_ready")
+            self.assertEqual(result.consensus_warning, "Actual-versus-expected comparison will be unavailable.")
+
+    def test_25_missing_consensus_does_not_fail_readiness(self) -> None:
+        with self.temporary_project() as temp:
+            self.assertEqual(self.result_for(Path(temp)).status, "READINESS_PASS")
+
+    def test_26_missing_consensus_reports_comparison_warning(self) -> None:
+        with self.temporary_project() as temp:
+            self.assertIn("comparison will be unavailable", self.result_for(Path(temp)).consensus_warning or "")
 
 
 if __name__ == "__main__":

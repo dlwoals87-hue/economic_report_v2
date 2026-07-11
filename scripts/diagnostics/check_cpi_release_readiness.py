@@ -19,17 +19,19 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from scripts.analysis import generate_cpi_analysis  # noqa: E402
-from scripts.automation import process_cpi_release, run_pending_cpi_processing  # noqa: E402
+from scripts.automation import lock_cpi_consensus, process_cpi_release, run_pending_cpi_processing  # noqa: E402
 from scripts.pipelines import capture_cpi_release  # noqa: E402
 from scripts.validators import validate_calendar_events  # noqa: E402
 
 
 EVENT_ID_RE = re.compile(r"[A-Z0-9_]+\Z")
 STYLE_RE = re.compile(r"<style\b[^>]*>.*?</style\s*>", re.IGNORECASE | re.DOTALL)
+CPI_METRICS = ("headline_mom", "headline_yoy", "core_mom", "core_yoy")
 REQUIRED_FILES = (
     "scripts/collectors/bls_cpi.py",
     "scripts/pipelines/capture_cpi_release.py",
     "scripts/automation/run_due_cpi_capture.py",
+    "scripts/automation/lock_cpi_consensus.py",
     "scripts/pipelines/build_cpi_release_canonical.py",
     "scripts/analysis/generate_cpi_analysis.py",
     "scripts/providers/rule_based.py",
@@ -67,6 +69,8 @@ class ReadinessResult:
     calendar: str
     capture_workflow: str
     processing_workflow: str
+    consensus: str
+    consensus_warning: str | None
     free_mode: bool
     external_api_required: bool
     full_offline_dry_run: str
@@ -142,10 +146,9 @@ def _calendar_contract(root: Path, event_id: str) -> tuple[dict[str, Any], str, 
         raise ValueError("calendar reference_period must be 2026-06 for US_CPI_2026_06")
     release_utc = _parse_utc(event.get("release_datetime_utc"), "release_datetime_utc")
     metrics = event.get("metrics")
-    expected_metrics = ("headline_mom", "headline_yoy", "core_mom", "core_yoy")
-    if not isinstance(metrics, dict) or set(metrics) != set(expected_metrics):
+    if not isinstance(metrics, dict) or set(metrics) != set(CPI_METRICS):
         raise ValueError("calendar expected metrics are invalid")
-    for metric in expected_metrics:
+    for metric in CPI_METRICS:
         value = metrics[metric]
         if not isinstance(value, dict) or value.get("unit") != "%" or "expected" not in value:
             raise ValueError(f"calendar expected structure is invalid: {metric}")
@@ -254,6 +257,32 @@ def _free_mode_contract(root: Path) -> None:
         raise ValueError("rule_based is not the pending-processing default")
     if generate_cpi_analysis.select_provider("rule_based") != "rule_based":
         raise ValueError("rule_based provider is not selectable")
+
+
+def _consensus_readiness(root: Path, event: dict[str, Any]) -> tuple[str, str | None]:
+    path = root / "data" / "consensus" / "cpi" / event["event_id"] / "consensus_snapshot.json"
+    warning = "Actual-versus-expected comparison will be unavailable."
+    if path.exists():
+        try:
+            snapshot = lock_cpi_consensus.read_json(path)
+            lock_cpi_consensus.validate_snapshot(snapshot)
+            if (
+                snapshot.get("event_id") == event["event_id"]
+                and snapshot.get("reference_period") == event["reference_period"]
+                and snapshot.get("release_datetime_utc") == event["release_datetime_utc"]
+            ):
+                return "locked", None
+        except lock_cpi_consensus.ConsensusLockError:
+            pass
+        return "not_locked", warning
+    metrics = event.get("metrics")
+    expected = [metrics.get(metric, {}).get("expected") for metric in CPI_METRICS] if isinstance(metrics, dict) else []
+    if expected and all(value is None for value in expected):
+        return "not_ready", warning
+    release_utc = _parse_utc(event["release_datetime_utc"], "release_datetime_utc")
+    if datetime.now(timezone.utc) >= release_utc:
+        return "expired_without_lock", warning
+    return "not_locked", warning
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -477,6 +506,8 @@ def check_readiness(root: Path, event_id: str) -> ReadinessResult:
     calendar_state = "invalid"
     capture_state = "invalid"
     processing_state = "invalid"
+    consensus_state = "not_locked"
+    consensus_warning: str | None = None
     offline: dict[str, Any] = {}
     before = _snapshot(root)
     try:
@@ -485,6 +516,7 @@ def check_readiness(root: Path, event_id: str) -> ReadinessResult:
         event, release_utc, release_kst = _calendar_contract(root, event_id)
         reference_period = str(event["reference_period"])
         calendar_state = "valid"
+        consensus_state, consensus_warning = _consensus_readiness(root, event)
     except (ValueError, OSError) as exc:
         errors.append(str(exc))
     try:
@@ -521,6 +553,8 @@ def check_readiness(root: Path, event_id: str) -> ReadinessResult:
         calendar=calendar_state,
         capture_workflow=capture_state,
         processing_workflow=processing_state,
+        consensus=consensus_state,
+        consensus_warning=consensus_warning,
         free_mode=not any("rule_based" in error for error in errors),
         external_api_required=False,
         full_offline_dry_run="passed" if offline.get("passed") else "failed",
@@ -543,6 +577,9 @@ def print_result(result: ReadinessResult) -> None:
     print(f"capture_workflow: {result.capture_workflow}")
     print(f"processing_workflow: {result.processing_workflow}")
     print(f"calendar: {result.calendar}")
+    print(f"consensus: {result.consensus}")
+    if result.consensus_warning:
+        print(f"CONSENSUS_WARNING: {result.consensus_warning}")
     print(f"free_mode: {str(result.free_mode).lower()}")
     print(f"external_api_required: {str(result.external_api_required).lower()}")
     print(f"full_offline_dry_run: {result.full_offline_dry_run}")

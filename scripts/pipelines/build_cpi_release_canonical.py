@@ -49,9 +49,24 @@ def import_capture_module():
     return module
 
 
+def import_consensus_module():
+    module_path = Path(__file__).parents[1] / "automation" / "lock_cpi_consensus.py"
+    spec = importlib.util.spec_from_file_location(
+        "lock_cpi_consensus_for_canonical",
+        module_path,
+    )
+    if spec is None or spec.loader is None:
+        raise ReleaseCanonicalError("could not load CPI consensus lock module")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["lock_cpi_consensus_for_canonical"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
 _capture_module = import_capture_module()
 stable_sha256 = _capture_module.stable_sha256
 CPI_METRICS = tuple(_capture_module.CPI_METRICS)
+_consensus_module = import_consensus_module()
 
 
 def project_root() -> Path:
@@ -253,14 +268,50 @@ def format_surprise_display(value: Decimal) -> str:
     return f"{rounded:.1f}%p"
 
 
-def metric_expected(event: dict[str, Any], metric_key: str) -> Decimal | None:
-    metrics = event.get("metrics")
-    if not isinstance(metrics, dict):
-        return None
-    metric = metrics.get(metric_key)
-    if not isinstance(metric, dict):
-        return None
-    return parse_decimal(metric.get("expected"), metric_key)
+def consensus_snapshot_path(root: Path, event_id: str) -> Path:
+    return root / "data" / "consensus" / "cpi" / event_id / "consensus_snapshot.json"
+
+
+def load_locked_consensus(root: Path, event: dict[str, Any], release: dict[str, Any]) -> dict[str, Any]:
+    path = consensus_snapshot_path(root, event["event_id"])
+    if not path.exists():
+        return {
+            "status": "not_locked",
+            "source": None,
+            "entered_at_utc": None,
+            "locked_at_utc": None,
+            "path": None,
+            "sha256": None,
+            "expected": {metric: None for metric in CPI_METRICS},
+        }
+    try:
+        snapshot = _consensus_module.read_json(path)
+        _consensus_module.validate_snapshot(snapshot)
+    except _consensus_module.ConsensusLockError as exc:
+        raise ReleaseCanonicalError(str(exc)) from exc
+    if snapshot.get("event_id") != event["event_id"]:
+        raise ReleaseCanonicalError("consensus snapshot event_id does not match calendar")
+    if snapshot.get("reference_period") != event["reference_period"]:
+        raise ReleaseCanonicalError("consensus snapshot reference_period does not match calendar")
+    release_datetime = iso_utc(parse_utc_datetime(event["release_datetime_utc"], "release_datetime_utc"))
+    if snapshot.get("release_datetime_utc") != release_datetime:
+        raise ReleaseCanonicalError("consensus snapshot release_datetime_utc does not match calendar")
+    if release.get("event_id") != snapshot["event_id"] or release.get("reference_period") != snapshot["reference_period"]:
+        raise ReleaseCanonicalError("consensus snapshot does not match as_released")
+    expected: dict[str, Decimal] = {}
+    for metric in CPI_METRICS:
+        expected[metric] = parse_decimal(snapshot["metrics"][metric]["expected_raw"], metric)
+        if expected[metric] is None:
+            raise ReleaseCanonicalError(f"consensus snapshot expected {metric} is invalid")
+    return {
+        "status": "locked",
+        "source": snapshot["consensus_source"],
+        "entered_at_utc": snapshot["entered_at_utc"],
+        "locked_at_utc": snapshot["locked_at_utc"],
+        "path": _consensus_module.relative_snapshot_path(event["event_id"]),
+        "sha256": snapshot["integrity"]["sha256"],
+        "expected": expected,
+    }
 
 
 def build_surprise(actual_raw: Any, expected: Decimal | None) -> dict[str, str] | None:
@@ -286,10 +337,7 @@ def build_surprise(actual_raw: Any, expected: Decimal | None) -> dict[str, str] 
     }
 
 
-def build_metric(metric_key: str, release_metric: dict[str, Any], event: dict[str, Any]) -> dict[str, Any]:
-    expected = metric_expected(event, metric_key)
-    event_metric = event["metrics"].get(metric_key, {})
-    unit = event_metric.get("unit") if isinstance(event_metric, dict) else None
+def build_metric(metric_key: str, release_metric: dict[str, Any], expected: Decimal | None, unit: Any) -> dict[str, Any]:
     return {
         "actual_as_released_raw": str(release_metric["actual_as_released_raw"]),
         "actual_as_released_display": str(release_metric["actual_as_released_display"]),
@@ -306,6 +354,7 @@ def build_canonical_payload(
     release: dict[str, Any],
     profiles: dict[str, Any],
     release_path_value: str,
+    consensus: dict[str, Any],
 ) -> dict[str, Any]:
     release_dt = parse_utc_datetime(event["release_datetime_utc"], "release_datetime_utc")
     profile = profiles.get("CPI", {}) if isinstance(profiles, dict) else {}
@@ -318,12 +367,22 @@ def build_canonical_payload(
     }
     for metric_key in CPI_METRICS:
         section, cadence = METRIC_PATHS[metric_key]
-        canonical_event[section][cadence] = build_metric(metric_key, metrics[metric_key], event)
+        event_metric = event["metrics"].get(metric_key, {})
+        unit = event_metric.get("unit") if isinstance(event_metric, dict) else None
+        canonical_event[section][cadence] = build_metric(
+            metric_key,
+            metrics[metric_key],
+            consensus["expected"][metric_key],
+            unit,
+        )
 
     canonical_event["consensus"] = {
-        "source": event.get("consensus_source"),
-        "status": event.get("consensus_status") or "not_entered",
-        "entered_at_utc": event.get("entered_at_utc"),
+        "source": consensus["source"],
+        "status": consensus["status"],
+        "entered_at_utc": consensus["entered_at_utc"],
+        "locked_at_utc": consensus["locked_at_utc"],
+        "consensus_snapshot_path": consensus["path"],
+        "consensus_snapshot_sha256": consensus["sha256"],
     }
 
     raw_snapshot_path = ensure_relative_source_path(
@@ -355,6 +414,8 @@ def build_canonical_payload(
             "captured_at_utc": release.get("captured_at_utc"),
             "raw_snapshot_path": raw_snapshot_path,
             "request_mode": release_source.get("request_mode"),
+            "consensus_snapshot_path": consensus["path"],
+            "consensus_snapshot_sha256": consensus["sha256"],
         },
         "analysis": {
             "status": "pending",
@@ -406,7 +467,8 @@ def build_from_files(root: Path, event_id: str, output: str | None = None) -> Bu
     release = read_json(capture_path)
     validate_release_payload(release, event)
     profiles = read_json(root / "data" / "indicator_profiles.json")
-    canonical = build_canonical_payload(event, release, profiles, capture_path_value)
+    consensus = load_locked_consensus(root, event, release)
+    canonical = build_canonical_payload(event, release, profiles, capture_path_value, consensus)
     status = write_canonical(output_path, canonical)
     return BuildResult(
         status=status,

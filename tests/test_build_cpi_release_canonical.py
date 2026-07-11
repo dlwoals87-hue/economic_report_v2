@@ -8,6 +8,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from scripts.automation import lock_cpi_consensus
+
 
 ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = ROOT / "scripts" / "pipelines" / "build_cpi_release_canonical.py"
@@ -98,16 +100,40 @@ def release_payload(event_id=EVENT_ID, reference_period=REFERENCE_PERIOD):
 
 
 def write_base_inputs(root: Path, event=None):
-    write_json(root / "data" / "calendar" / "events.json", {"version": 1, "events": [event or calendar_event()]})
+    event_payload = event or calendar_event()
+    write_json(root / "data" / "calendar" / "events.json", {"version": 1, "events": [event_payload]})
     write_json(
         root / "data" / "indicator_profiles.json",
         {"CPI": {"display_name": "US Consumer Price Index", "country": "US"}},
     )
+    if event_payload.get("consensus_status") == "complete":
+        values = {
+            key: str(event_payload["metrics"][key]["expected"])
+            for key in lock_cpi_consensus.CPI_METRICS
+        }
+        write_consensus_snapshot(root, values, event_payload)
 
 
 def write_release(root: Path, payload=None, event_id=EVENT_ID):
     path = root / "data" / "releases" / "cpi" / event_id / "as_released.json"
     write_json(path, payload or release_payload(event_id=event_id))
+    return path
+
+
+def write_consensus_snapshot(root: Path, values: dict[str, str], event_payload=None, path_event_id=None):
+    payload = event_payload or calendar_event()
+    snapshot_event = dict(payload)
+    snapshot_event["consensus_source"] = "Trusted survey"
+    snapshot_event["consensus_status"] = "complete"
+    snapshot_event["entered_at_utc"] = "2026-07-14T11:00:00Z"
+    parsed = {key: lock_cpi_consensus.parse_expected(value, key) for key, value in values.items()}
+    snapshot = lock_cpi_consensus.build_snapshot(
+        snapshot_event,
+        parsed,
+        lock_cpi_consensus.parse_utc("2026-07-14T12:00:00Z", "locked_at_utc"),
+    )
+    path = root / "data" / "consensus" / "cpi" / (path_event_id or payload["event_id"]) / "consensus_snapshot.json"
+    write_json(path, snapshot)
     return path
 
 
@@ -235,17 +261,7 @@ class BuildCpiReleaseCanonicalTests(unittest.TestCase):
 
     def test_numeric_expected_calculates_surprise(self):
         def case(root):
-            write_base_inputs(
-                root,
-                calendar_event(
-                    expected_values={
-                        "headline_mom": "0.1",
-                        "headline_yoy": "3.1",
-                        "core_mom": "0.2",
-                        "core_yoy": None,
-                    }
-                ),
-            )
+            write_consensus_snapshot(root, {"headline_mom": "0.1", "headline_yoy": "3.1", "core_mom": "0.2", "core_yoy": "3.1"})
             write_release(root)
             self.build(root)
             surprise = read_canonical(root)["event"]["headline"]["mom"]["surprise"]
@@ -255,12 +271,7 @@ class BuildCpiReleaseCanonicalTests(unittest.TestCase):
 
     def test_above_expected_direction(self):
         def case(root):
-            write_base_inputs(root, calendar_event(expected_values={
-                "headline_mom": "0.1",
-                "headline_yoy": None,
-                "core_mom": None,
-                "core_yoy": None,
-            }))
+            write_consensus_snapshot(root, {"headline_mom": "0.1", "headline_yoy": "2.9", "core_mom": "0.2", "core_yoy": "3.1"})
             write_release(root)
             self.build(root)
             self.assertEqual(
@@ -271,12 +282,7 @@ class BuildCpiReleaseCanonicalTests(unittest.TestCase):
 
     def test_below_expected_direction(self):
         def case(root):
-            write_base_inputs(root, calendar_event(expected_values={
-                "headline_mom": None,
-                "headline_yoy": "3.1",
-                "core_mom": None,
-                "core_yoy": None,
-            }))
+            write_consensus_snapshot(root, {"headline_mom": "0.3", "headline_yoy": "3.1", "core_mom": "0.2", "core_yoy": "3.1"})
             write_release(root)
             self.build(root)
             self.assertEqual(
@@ -287,12 +293,7 @@ class BuildCpiReleaseCanonicalTests(unittest.TestCase):
 
     def test_in_line_direction(self):
         def case(root):
-            write_base_inputs(root, calendar_event(expected_values={
-                "headline_mom": None,
-                "headline_yoy": None,
-                "core_mom": "0.2",
-                "core_yoy": None,
-            }))
+            write_consensus_snapshot(root, {"headline_mom": "0.3", "headline_yoy": "2.9", "core_mom": "0.2", "core_yoy": "3.1"})
             write_release(root)
             self.build(root)
             self.assertEqual(
@@ -407,6 +408,94 @@ class BuildCpiReleaseCanonicalTests(unittest.TestCase):
             write_release(root, release_payload(event_id=event_id), event_id=event_id)
             self.build(root, event_id=event_id)
             self.assertFalse((ROOT / "data" / "releases" / "cpi" / event_id).exists())
+        self.run_in_temp(case)
+
+    def test_locked_snapshot_expected_values_are_mapped(self):
+        def case(root):
+            write_consensus_snapshot(root, {"headline_mom": "0.1", "headline_yoy": "2.8", "core_mom": "0.2", "core_yoy": "3.0"})
+            write_release(root)
+            self.build(root)
+            canonical = read_canonical(root)
+            self.assertEqual(canonical["event"]["headline"]["mom"]["expected"], "0.1")
+            self.assertEqual(canonical["event"]["core"]["yoy"]["expected"], "3")
+            self.assertEqual(canonical["event"]["consensus"]["status"], "locked")
+        self.run_in_temp(case)
+
+    def test_locked_snapshot_calculates_surprise(self):
+        def case(root):
+            write_consensus_snapshot(root, {"headline_mom": "0.1", "headline_yoy": "2.9", "core_mom": "0.2", "core_yoy": "3.1"})
+            write_release(root)
+            self.build(root)
+            self.assertEqual(read_canonical(root)["event"]["headline"]["mom"]["surprise"]["raw"], "0.2")
+        self.run_in_temp(case)
+
+    def test_missing_snapshot_keeps_expected_null(self):
+        def case(root):
+            write_release(root)
+            self.build(root)
+            self.assertIsNone(read_canonical(root)["event"]["headline"]["mom"]["expected"])
+        self.run_in_temp(case)
+
+    def test_mutable_calendar_expected_is_ignored_without_snapshot(self):
+        def case(root):
+            write_base_inputs(root, calendar_event(expected_values={
+                "headline_mom": "9.9", "headline_yoy": "9.9", "core_mom": "9.9", "core_yoy": "9.9",
+            }))
+            write_release(root)
+            self.build(root)
+            metric = read_canonical(root)["event"]["headline"]["mom"]
+            self.assertIsNone(metric["expected"])
+            self.assertIsNone(metric["surprise"])
+        self.run_in_temp(case)
+
+    def test_snapshot_sha_mismatch_blocks_canonical(self):
+        def case(root):
+            path = write_consensus_snapshot(root, {"headline_mom": "0.1", "headline_yoy": "2.9", "core_mom": "0.2", "core_yoy": "3.1"})
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            payload["integrity"]["sha256"] = "0" * 64
+            write_json(path, payload)
+            write_release(root)
+            with self.assertRaises(build_cpi_release_canonical.ReleaseCanonicalError):
+                self.build(root)
+            self.assertFalse(default_output(root).exists())
+        self.run_in_temp(case)
+
+    def test_snapshot_event_id_mismatch_blocks_canonical(self):
+        def case(root):
+            bad_event = calendar_event(event_id="US_CPI_2099_01")
+            write_consensus_snapshot(root, {"headline_mom": "0.1", "headline_yoy": "2.9", "core_mom": "0.2", "core_yoy": "3.1"}, bad_event, path_event_id=EVENT_ID)
+            write_release(root)
+            with self.assertRaises(build_cpi_release_canonical.ReleaseCanonicalError):
+                self.build(root)
+        self.run_in_temp(case)
+
+    def test_snapshot_reference_period_mismatch_blocks_canonical(self):
+        def case(root):
+            bad_event = calendar_event(reference_period="2099-01")
+            write_consensus_snapshot(root, {"headline_mom": "0.1", "headline_yoy": "2.9", "core_mom": "0.2", "core_yoy": "3.1"}, bad_event, path_event_id=EVENT_ID)
+            write_release(root)
+            with self.assertRaises(build_cpi_release_canonical.ReleaseCanonicalError):
+                self.build(root)
+        self.run_in_temp(case)
+
+    def test_snapshot_path_and_hash_are_recorded(self):
+        def case(root):
+            path = write_consensus_snapshot(root, {"headline_mom": "0.1", "headline_yoy": "2.9", "core_mom": "0.2", "core_yoy": "3.1"})
+            snapshot = json.loads(path.read_text(encoding="utf-8"))
+            write_release(root)
+            self.build(root)
+            canonical = read_canonical(root)
+            self.assertEqual(canonical["source"]["consensus_snapshot_path"], "data/consensus/cpi/US_CPI_2026_06/consensus_snapshot.json")
+            self.assertEqual(canonical["source"]["consensus_snapshot_sha256"], snapshot["integrity"]["sha256"])
+        self.run_in_temp(case)
+
+    def test_snapshot_validation_does_not_modify_as_released(self):
+        def case(root):
+            write_consensus_snapshot(root, {"headline_mom": "0.1", "headline_yoy": "2.9", "core_mom": "0.2", "core_yoy": "3.1"})
+            release_path = write_release(root)
+            before = release_path.read_bytes()
+            self.build(root)
+            self.assertEqual(before, release_path.read_bytes())
         self.run_in_temp(case)
 
 
