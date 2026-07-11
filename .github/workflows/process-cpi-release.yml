@@ -259,3 +259,23 @@ jobs:
           PY
           git commit -m "report: process ${EVENT_ID} CPI release"
           git push origin HEAD:main
+
+      - name: Build CPI notification event
+        if: success()
+        env:
+          RESULT_JSON: ${{ runner.temp }}/cpi_processing_result.json
+          NOTIFICATION_EVENT: ${{ runner.temp }}/notification_event.json
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          python scripts/automation/build_cpi_notification_event.py \
+            --result-json "$RESULT_JSON" \
+            --repository "$REPOSITORY" \
+            --output "$NOTIFICATION_EVENT"
+
+      - name: Upload CPI notification event
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpi-notification-event
+          path: ${{ runner.temp }}/notification_event.json
+          if-no-files-found: error
