@@ -231,15 +231,18 @@ def _metric_payload(canonical: dict[str, Any], metric_key: str) -> dict[str, str
     metric = group.get(period_key) if isinstance(group, dict) else None
     if not isinstance(metric, dict):
         raise CpiReportError("INVALID_INPUT", f"event.metrics.{metric_key} is required")
+    historical = isinstance(canonical.get("meta"), dict) and canonical["meta"].get("data_origin") == "historical_backfill"
+    actual_display_key = "actual_display" if historical else "actual_as_released_display"
+    previous_display_key = "previous_display" if historical else "previous_as_released_display"
     return {
         "actual": _non_empty_string(
-            metric.get("actual_as_released_display"),
-            f"event.metrics.{metric_key}.actual_as_released_display",
+            metric.get(actual_display_key),
+            f"event.metrics.{metric_key}.{actual_display_key}",
         ),
         "expected": _expected_display(metric),
         "previous": _non_empty_string(
-            metric.get("previous_as_released_display"),
-            f"event.metrics.{metric_key}.previous_as_released_display",
+            metric.get(previous_display_key),
+            f"event.metrics.{metric_key}.{previous_display_key}",
         ),
         "surprise": _surprise_display(metric),
     }
@@ -540,12 +543,14 @@ def _load_and_validate_inputs(
     source = canonical.get("source")
     if not isinstance(input_meta, dict) or not isinstance(source, dict):
         raise CpiReportError("INPUT_INTEGRITY_MISMATCH", "input hash metadata is missing")
-    release_sha = source.get("release_capture_sha256")
+    historical = isinstance(canonical.get("meta"), dict) and canonical["meta"].get("data_origin") == "historical_backfill"
+    source_hash_field = "historical_observation_sha256" if historical else "release_capture_sha256"
+    release_sha = source.get(source_hash_field)
     expected_canonical_path = _relative_path(canonical_path, root)
     if (
         input_meta.get("canonical_path") != expected_canonical_path
         or input_meta.get("canonical_sha256") != canonical_sha
-        or input_meta.get("release_capture_sha256") != release_sha
+        or input_meta.get(source_hash_field) != release_sha
     ):
         raise CpiReportError("INPUT_INTEGRITY_MISMATCH", "canonical and analysis hashes do not match")
 
@@ -611,7 +616,12 @@ def _write_new_file(path: Path, data: bytes) -> None:
             handle.flush()
             os.fsync(handle.fileno())
             temp_path = Path(handle.name)
-        os.link(temp_path, path)
+        try:
+            os.link(temp_path, path)
+        except OSError as exc:
+            if path.exists():
+                raise CpiReportError("OUTPUT_CONFLICT", "report output already exists") from exc
+            os.replace(temp_path, path)
     except FileExistsError as exc:
         raise CpiReportError("OUTPUT_CONFLICT", "report output already exists") from exc
     finally:

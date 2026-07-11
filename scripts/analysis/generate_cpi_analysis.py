@@ -203,12 +203,25 @@ def _metric_from_canonical(canonical: dict[str, Any], metric_key: str) -> dict[s
     return metric
 
 
-def _validate_metric(metric_key: str, metric: dict[str, Any]) -> None:
+def _metric_field_names(canonical: dict[str, Any]) -> tuple[str, str, str, str]:
+    meta = canonical.get("meta")
+    if isinstance(meta, dict) and meta.get("data_origin") == "historical_backfill":
+        return ("actual_raw", "actual_display", "previous_raw", "previous_display")
+    return (
+        "actual_as_released_raw",
+        "actual_as_released_display",
+        "previous_as_released_raw",
+        "previous_as_released_display",
+    )
+
+
+def _validate_metric(metric_key: str, metric: dict[str, Any], fields: tuple[str, str, str, str]) -> None:
     prefix = f"metrics.{metric_key}"
-    actual_raw = _decimal(metric.get("actual_as_released_raw"), f"{prefix}.actual_as_released_raw")
-    _non_empty_string(metric.get("actual_as_released_display"), f"{prefix}.actual_as_released_display")
-    _decimal(metric.get("previous_as_released_raw"), f"{prefix}.previous_as_released_raw")
-    _non_empty_string(metric.get("previous_as_released_display"), f"{prefix}.previous_as_released_display")
+    actual_raw_key, actual_display_key, previous_raw_key, previous_display_key = fields
+    actual_raw = _decimal(metric.get(actual_raw_key), f"{prefix}.{actual_raw_key}")
+    _non_empty_string(metric.get(actual_display_key), f"{prefix}.{actual_display_key}")
+    _decimal(metric.get(previous_raw_key), f"{prefix}.{previous_raw_key}")
+    _non_empty_string(metric.get(previous_display_key), f"{prefix}.{previous_display_key}")
 
     expected = _optional_decimal(metric.get("expected"), f"{prefix}.expected")
     surprise = metric.get("surprise")
@@ -261,10 +274,13 @@ def validate_canonical_release(canonical: dict[str, Any], event_id: str) -> None
         "indicator_type": "CPI",
         "country": "US",
         "is_sample": False,
-        "data_origin": "bls_release_capture",
-        "data_status": "release_captured",
         "analysis_status": "pending",
     }
+    if meta.get("data_origin") == "historical_backfill":
+        expected_meta["data_status"] = "historical_backfill"
+    else:
+        expected_meta["data_origin"] = "bls_release_capture"
+        expected_meta["data_status"] = "release_captured"
     for key, expected in expected_meta.items():
         if meta.get(key) != expected:
             raise CpiAnalysisError(
@@ -289,10 +305,12 @@ def validate_canonical_release(canonical: dict[str, Any], event_id: str) -> None
     source = canonical.get("source")
     if not isinstance(source, dict):
         raise CpiAnalysisError("INVALID_CANONICAL_RELEASE", "source: object required")
-    _non_empty_string(source.get("release_capture_sha256"), "source.release_capture_sha256")
+    source_hash_field = "historical_observation_sha256" if meta.get("data_origin") == "historical_backfill" else "release_capture_sha256"
+    _non_empty_string(source.get(source_hash_field), f"source.{source_hash_field}")
 
+    fields = _metric_field_names(canonical)
     for metric_key in METRIC_PATHS:
-        _validate_metric(metric_key, _metric_from_canonical(canonical, metric_key))
+        _validate_metric(metric_key, _metric_from_canonical(canonical, metric_key), fields)
 
 
 def _append_unique(values: list[str], value: str) -> None:
@@ -303,6 +321,7 @@ def _append_unique(values: list[str], value: str) -> None:
 
 def build_facts(canonical: dict[str, Any]) -> dict[str, Any]:
     meta = canonical["meta"]
+    actual_raw_key, actual_display_key, previous_raw_key, previous_display_key = _metric_field_names(canonical)
     facts_metrics: dict[str, Any] = {}
     percentage_tokens: list[str] = []
     percentage_point_tokens: list[str] = []
@@ -310,16 +329,16 @@ def build_facts(canonical: dict[str, Any]) -> dict[str, Any]:
 
     for metric_key in METRIC_PATHS:
         metric = _metric_from_canonical(canonical, metric_key)
-        actual = _decimal(metric["actual_as_released_raw"], f"metrics.{metric_key}.actual")
-        previous = _decimal(metric["previous_as_released_raw"], f"metrics.{metric_key}.previous")
+        actual = _decimal(metric[actual_raw_key], f"metrics.{metric_key}.actual")
+        previous = _decimal(metric[previous_raw_key], f"metrics.{metric_key}.previous")
         expected = _optional_decimal(metric.get("expected"), f"metrics.{metric_key}.expected")
         with localcontext() as context:
             context.prec = 34
             change = actual - previous
         momentum = "accelerating" if change > 0 else "decelerating" if change < 0 else "unchanged"
 
-        actual_display = str(metric["actual_as_released_display"])
-        previous_display = str(metric["previous_as_released_display"])
+        actual_display = str(metric[actual_display_key])
+        previous_display = str(metric[previous_display_key])
         _append_unique(percentage_tokens, actual_display)
         _append_unique(percentage_tokens, previous_display)
         if expected is not None:
@@ -330,9 +349,9 @@ def build_facts(canonical: dict[str, Any]) -> dict[str, Any]:
             _append_unique(percentage_point_tokens, surprise["display"])
 
         facts_metrics[metric_key] = {
-            "actual": str(metric["actual_as_released_raw"]),
+            "actual": str(metric[actual_raw_key]),
             "actual_display": actual_display,
-            "previous": str(metric["previous_as_released_raw"]),
+            "previous": str(metric[previous_raw_key]),
             "previous_display": previous_display,
             "expected": None if expected is None else str(metric["expected"]),
             "surprise": surprise,
@@ -532,6 +551,10 @@ def _write_new_json(path: Path, payload: dict[str, Any]) -> None:
             os.link(temp_path, path)
         except FileExistsError as exc:
             raise CpiAnalysisError("ALREADY_ANALYZED", "analysis output already exists") from exc
+        except OSError as exc:
+            if path.exists():
+                raise CpiAnalysisError("ALREADY_ANALYZED", "analysis output already exists") from exc
+            os.replace(temp_path, path)
     finally:
         if temp_path.exists():
             temp_path.unlink()
@@ -755,7 +778,7 @@ def analyze_from_files(
         "input": {
             "canonical_path": canonical_path_value,
             "canonical_sha256": _sha256(canonical_bytes),
-            "release_capture_sha256": canonical["source"]["release_capture_sha256"],
+            ("historical_observation_sha256" if canonical["meta"].get("data_origin") == "historical_backfill" else "release_capture_sha256"): canonical["source"]["historical_observation_sha256"] if canonical["meta"].get("data_origin") == "historical_backfill" else canonical["source"]["release_capture_sha256"],
         },
         "provider": {
             "name": provider_result.provider_name,
