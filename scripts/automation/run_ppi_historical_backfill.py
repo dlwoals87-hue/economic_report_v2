@@ -21,6 +21,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from scripts.analysis import generate_ppi_analysis  # noqa: E402
 from scripts.automation import update_report_index  # noqa: E402
 from scripts.collectors import bls_ppi  # noqa: E402
+from scripts.common import preview as common_preview  # noqa: E402
 from scripts.pipelines import build_ppi_historical_canonical as canonical_module  # noqa: E402
 from scripts.pipelines import build_ppi_release_report  # noqa: E402
 
@@ -59,15 +60,14 @@ def json_bytes(payload: dict[str, Any]) -> bytes:
 
 
 def file_sha(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    return common_preview.file_sha256(path)
 
 
 def write_new(path: Path, data: bytes) -> None:
-    if path.exists():
-        raise PpiBackfillError("PPI_BACKFILL_CONFLICT", f"existing output: {path.name}")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("xb") as handle:
-        handle.write(data)
+    try:
+        common_preview.write_immutable_bytes(path, data)
+    except common_preview.ImmutableWriteConflict as exc:
+        raise PpiBackfillError("PPI_BACKFILL_CONFLICT", f"existing output: {path.name}") from exc
 
 
 def parse_utc(value: str, field: str) -> datetime:
@@ -89,19 +89,10 @@ def validate_request(event_id: str, reference_period: str, release: str, now: da
 
 
 def safe_output_root(root: Path, output_root: Path) -> Path:
-    if not output_root.is_absolute() or ".." in output_root.parts:
-        raise PpiBackfillError("PPI_UNSAFE_OUTPUT_ROOT", "output root must be absolute without ..")
-    resolved = output_root.resolve(strict=False)
     try:
-        resolved.relative_to(root.resolve())
-    except ValueError:
-        pass
-    else:
-        raise PpiBackfillError("PPI_UNSAFE_OUTPUT_ROOT", "output root must be outside project")
-    for parent in (output_root, *output_root.parents):
-        if parent.exists() and parent.is_symlink():
-            raise PpiBackfillError("PPI_UNSAFE_OUTPUT_ROOT", "output root cannot use symlinks")
-    return resolved
+        return common_preview.external_preview_root(root, output_root)
+    except common_preview.PreviewSafetyError as exc:
+        raise PpiBackfillError("PPI_UNSAFE_OUTPUT_ROOT", str(exc)) from exc
 
 
 def protected_hashes(root: Path) -> dict[Path, str]:
@@ -146,6 +137,7 @@ def build_observation(processed: dict[str, Any], event_id: str, release: str, re
         "processed": processed, "integrity": {"sha256": None},
     }
     result["integrity"]["sha256"] = canonical_module.sha256_payload(result)
+    common_preview.validate_historical_provenance(result["provenance"], result["retrieved_at_utc"], result["integrity"]["sha256"])
     return result
 
 
@@ -169,13 +161,10 @@ def collect_processed(root: Path, stage: Path, reference: str, now: datetime, us
 
 
 def local_path(value: str) -> Path | None:
-    value = value.split("#", 1)[0].split("?", 1)[0]
-    if not value or value.startswith("#") or value.lower().startswith(("http:", "https:", "mailto:")):
-        return None
-    path = Path(value)
-    if value.lower().startswith("file:") or path.is_absolute() or ".." in path.parts or any(part.startswith(".") for part in path.parts):
-        raise PpiBackfillError("PPI_PREVIEW_LINKS_INVALID", "unsafe local link")
-    return path
+    try:
+        return common_preview.local_preview_reference(value)
+    except common_preview.PreviewSafetyError as exc:
+        raise PpiBackfillError("PPI_PREVIEW_LINKS_INVALID", str(exc)) from exc
 
 
 def repair_local_links(docs: Path, preview: Path) -> tuple[str, ...]:

@@ -23,6 +23,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from scripts.analysis import generate_cpi_analysis  # noqa: E402
 from scripts.automation import update_report_index  # noqa: E402
 from scripts.collectors import bls_cpi  # noqa: E402
+from scripts.common import preview as common_preview  # noqa: E402
 from scripts.pipelines import build_cpi_release_report  # noqa: E402
 from scripts.validators import validate_calendar_events  # noqa: E402
 
@@ -62,15 +63,11 @@ def project_root() -> Path:
 
 
 def stable_sha256(payload: dict[str, Any]) -> str:
-    value = copy.deepcopy(payload)
-    if isinstance(value.get("integrity"), dict):
-        value["integrity"].pop("sha256", None)
-    encoded = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    return hashlib.sha256(encoded).hexdigest()
+    return common_preview.stable_json_sha256(payload)
 
 
 def file_sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    return common_preview.file_sha256(path)
 
 
 def json_bytes(payload: dict[str, Any]) -> bytes:
@@ -78,19 +75,10 @@ def json_bytes(payload: dict[str, Any]) -> bytes:
 
 
 def write_new(path: Path, data: bytes) -> None:
-    if path.exists():
-        raise BackfillError("BACKFILL_CONFLICT", f"output already exists: {path.name}")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.parent / f".{path.name}.{os.getpid()}.{uuid4().hex}.tmp"
     try:
-        with temporary.open("xb") as handle:
-            handle.write(data)
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temporary, path)
-    finally:
-        if temporary.exists():
-            temporary.unlink()
+        common_preview.write_immutable_bytes(path, data)
+    except common_preview.ImmutableWriteConflict as exc:
+        raise BackfillError("BACKFILL_CONFLICT", f"output already exists: {path.name}") from exc
 
 
 def iso_utc(value: datetime) -> str:
@@ -136,17 +124,10 @@ def read_calendar_event(root: Path, event_id: str, now: datetime) -> dict[str, A
 
 
 def output_root_path(root: Path, value: str) -> Path:
-    requested = Path(value)
-    if ".." in requested.parts:
-        raise BackfillError("BACKFILL_INVALID_OUTPUT_ROOT", "output-root cannot contain parent traversal")
-    if not requested.is_absolute():
-        raise BackfillError("BACKFILL_INVALID_OUTPUT_ROOT", "output-root must be outside the project")
-    resolved = requested.resolve(strict=False)
-    if resolved.is_relative_to(root.resolve()):
-        raise BackfillError("BACKFILL_INVALID_OUTPUT_ROOT", "output-root must be outside the project")
-    if any(path.is_symlink() for path in (requested, *requested.parents) if path.exists()):
-        raise BackfillError("BACKFILL_INVALID_OUTPUT_ROOT", "output-root cannot use symlinks")
-    return resolved
+    try:
+        return common_preview.external_preview_root(root, Path(value))
+    except common_preview.PreviewSafetyError as exc:
+        raise BackfillError("BACKFILL_INVALID_OUTPUT_ROOT", str(exc)) from exc
 
 
 def fetch_live_response(now: datetime) -> dict[str, Any]:
@@ -191,6 +172,7 @@ def build_observation(event: dict[str, Any], response: dict[str, Any], retrieved
         "integrity": {"sha256": None},
     }
     payload["integrity"]["sha256"] = stable_sha256(payload)
+    common_preview.validate_historical_provenance(payload["provenance"], payload["retrieved_at_utc"], payload["integrity"]["sha256"])
     return payload
 
 
@@ -233,15 +215,10 @@ BLOCKED_PARTS = {".git", ".github", "data", "scripts"}
 
 
 def local_reference(value: str) -> Path | None:
-    href = value.split("#", 1)[0].split("?", 1)[0]
-    if href.lower().startswith("file:"):
-        raise BackfillError("BACKFILL_PREVIEW_LINKS_INVALID", "file URL is not allowed in preview links")
-    if not href or value.startswith("#") or href.lower().startswith(("javascript:", "http:", "https:", "mailto:")):
-        return None
-    path = Path(href)
-    if path.is_absolute() or re.match(r"^[A-Za-z]:[\\/]", href) or ".." in path.parts or any(part.startswith(".") or part in BLOCKED_PARTS for part in path.parts):
-        raise BackfillError("BACKFILL_PREVIEW_LINKS_INVALID", "unsafe local preview link")
-    return path
+    try:
+        return common_preview.local_preview_reference(value, blocked_top_levels=BLOCKED_PARTS)
+    except common_preview.PreviewSafetyError as exc:
+        raise BackfillError("BACKFILL_PREVIEW_LINKS_INVALID", str(exc)) from exc
 
 
 def copy_preview_file(source_root: Path, destination_root: Path, relative: Path) -> bool:
