@@ -1,0 +1,1 @@
+"""Market consensus provider adapters."""
