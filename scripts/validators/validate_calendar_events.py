@@ -11,6 +11,7 @@ from typing import Any
 
 
 CPI_METRICS = ("headline_mom", "headline_yoy", "core_mom", "core_yoy")
+PPI_METRICS = ("headline_mom", "headline_yoy", "core_mom", "core_yoy")
 VALID_CONSENSUS_STATUSES = {"not_entered", "partial", "complete"}
 REFERENCE_PERIOD_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
 
@@ -123,6 +124,10 @@ def validate_cpi_metrics(event: dict[str, Any], event_path: str, errors: list[st
     return states
 
 
+def validate_ppi_metrics(event: dict[str, Any], event_path: str, errors: list[str]) -> list[str]:
+    return validate_cpi_metrics(event, event_path, errors)
+
+
 def validate_events_payload(payload: dict[str, Any], now: datetime | None = None) -> ValidationResult:
     errors: list[str] = []
     warnings: list[str] = []
@@ -173,6 +178,8 @@ def validate_events_payload(payload: dict[str, Any], now: datetime | None = None
         metric_states: list[str] = []
         if event.get("indicator_type") == "CPI":
             metric_states = validate_cpi_metrics(event, event_path, errors)
+        elif event.get("indicator_type") == "PPI":
+            metric_states = validate_ppi_metrics(event, event_path, errors)
         actual_status = expected_status(metric_states) if metric_states else "not_entered"
         if actual_status in counts:
             counts[actual_status] += 1
