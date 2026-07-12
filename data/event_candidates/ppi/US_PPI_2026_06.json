@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "event_id": "US_PPI_2026_06",
+  "indicator_type": "PPI",
+  "country": "US",
+  "reference_period": "2026-06",
+  "release_datetime_utc": "2026-07-15T12:30:00Z",
+  "release_datetime_kst": "2026-07-15T21:30:00+09:00",
+  "schedule_source": {
+    "url": "https://www.bls.gov/schedule/news_release/ppi.htm",
+    "checked_at_utc": "2026-07-12T07:52:03Z"
+  },
+  "approval": {
+    "status": "candidate",
+    "approved_by": null,
+    "approved_at_utc": null
+  },
+  "consensus_status": "not_entered",
+  "consensus_source": null,
+  "entered_at_utc": null,
+  "metrics": {
+    "headline_mom": {
+      "expected": null
+    },
+    "headline_yoy": {
+      "expected": null
+    },
+    "core_mom": {
+      "expected": null
+    },
+    "core_yoy": {
+      "expected": null
+    }
+  },
+  "provenance": {
+    "data_origin": "manual_official_schedule_entry",
+    "official_schedule_verified": true
+  },
+  "integrity": {
+    "sha256": "abd3189bb23a6e29a05eb99191109b9866c9747b3f1dca9fe1b1210a8b27285d"
+  }
+}
