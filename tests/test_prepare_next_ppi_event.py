@@ -7,6 +7,7 @@ import unittest
 from contextlib import redirect_stdout
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest.mock import patch
 
 from scripts.automation import prepare_next_ppi_event as prepare
 
@@ -108,6 +109,21 @@ class PrepareNextPpiEventTests(unittest.TestCase):
                 "PPI_EVENT_CANDIDATE_CONFLICT",
             )
             self.assertEqual(before, candidate.read_bytes())
+
+    def test_hard_link_unsupported_uses_exclusive_create_fallback(self):
+        temporary, root = self.root()
+        unsupported = OSError(0, "unsupported", None, 1)
+        with temporary, patch.object(prepare.os, "link", side_effect=unsupported):
+            result = self.call(root)
+            self.assertEqual(result.status, "PPI_EVENT_CANDIDATE_CREATED")
+            self.assertTrue((root / "candidates" / "US_PPI_2026_07.json").is_file())
+
+    def test_hard_link_permission_error_is_not_hidden_by_fallback(self):
+        temporary, root = self.root()
+        with temporary, patch.object(prepare.os, "link", side_effect=PermissionError("denied")):
+            with self.assertRaises(PermissionError):
+                self.call(root)
+            self.assertFalse((root / "candidates" / "US_PPI_2026_07.json").exists())
 
     def test_registered_ppi_duplicates_are_blocked(self):
         cases = (

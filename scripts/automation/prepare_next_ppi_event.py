@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import errno
 import hashlib
 import json
 import os
@@ -19,6 +20,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 EVENT_RE = re.compile(r"US_PPI_(\d{4})_(0[1-9]|1[0-2])\Z")
 REFERENCE_PERIOD_RE = re.compile(r"\d{4}-(0[1-9]|1[0-2])\Z")
 PPI_METRICS = ("headline_mom", "headline_yoy", "core_mom", "core_yoy")
+HARD_LINK_UNSUPPORTED_ERRNOS = {errno.EXDEV, errno.ENOTSUP, errno.EOPNOTSUPP}
+HARD_LINK_UNSUPPORTED_WINERRORS = {1, 50}
 
 
 class PpiEventCandidateError(Exception):
@@ -174,6 +177,10 @@ def relative_path(root: Path, path: Path) -> str:
         return str(path)
 
 
+def hard_link_unsupported(error: OSError) -> bool:
+    return error.errno in HARD_LINK_UNSUPPORTED_ERRNOS or getattr(error, "winerror", None) in HARD_LINK_UNSUPPORTED_WINERRORS
+
+
 def registered_ppi_conflict(calendar: dict[str, Any], event_id: str, reference_period: str, release: datetime) -> bool:
     release_utc = iso_utc(release)
     for event in calendar["events"]:
@@ -250,6 +257,16 @@ def prepare(
             existing = json.loads(candidate_path.read_text(encoding="utf-8"))
             status = "PPI_EVENT_CANDIDATE_ALREADY_EXISTS" if existing == payload else "PPI_EVENT_CANDIDATE_CONFLICT"
             return result(status, event_id=event_id, reference_period=reference_period, release=release, source_url=source_url, sha256=payload["integrity"]["sha256"])
+        except OSError as exc:
+            if not hard_link_unsupported(exc):
+                raise
+            try:
+                with candidate_path.open("xb") as handle:
+                    handle.write(temporary.read_bytes())
+            except FileExistsError:
+                existing = json.loads(candidate_path.read_text(encoding="utf-8"))
+                status = "PPI_EVENT_CANDIDATE_ALREADY_EXISTS" if existing == payload else "PPI_EVENT_CANDIDATE_CONFLICT"
+                return result(status, event_id=event_id, reference_period=reference_period, release=release, source_url=source_url, sha256=payload["integrity"]["sha256"])
     finally:
         if temporary.exists():
             temporary.unlink()
