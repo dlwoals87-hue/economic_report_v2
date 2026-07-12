@@ -87,14 +87,15 @@ def validate_event(calendar: dict[str, Any], event_id: str, now: datetime) -> tu
     metrics = event.get("metrics")
     if not isinstance(metrics, dict) or set(metrics) != set(PPI_METRICS): raise PpiConsensusLockError("not ready")
     return event, release, {name: parse_expected(metrics[name].get("expected") if isinstance(metrics[name], dict) else None, name) for name in PPI_METRICS}
-def build_snapshot(event: dict[str, Any], release: datetime, values: dict[str, str], calendar_sha: str, locked_at: datetime) -> dict[str, Any]:
+def build_snapshot(event: dict[str, Any], release: datetime, values: dict[str, str], calendar_sha: str, locked_at: datetime, observation_provenance: dict[str, Any] | None = None) -> dict[str, Any]:
     payload: dict[str, Any] = {"schema_version":"1.0","event_id":event["event_id"],"indicator_type":"PPI","country":"US","reference_period":event["reference_period"],"release_datetime_utc":iso_utc(release),"release_datetime_kst":iso_kst(release),"consensus_status":"complete","consensus_source":event["consensus_source"].strip(),"entered_at_utc":event["entered_at_utc"],"source_observed_at_utc":event.get("source_observed_at_utc"),"snapshot_created_at_utc":iso_utc(locked_at),"source_calendar_sha256":calendar_sha,"metrics":{name:{"expected_raw":values[name]} for name in PPI_METRICS},"integrity":{"immutable":True,"sha256":None}}
+    if observation_provenance is not None: payload["observation_provenance"] = observation_provenance
     payload["integrity"]["sha256"] = stable_sha256(payload); return payload
 def valid_snapshot(value: dict[str, Any]) -> bool:
     return isinstance(value, dict) and value.get("integrity", {}).get("immutable") is True and value.get("integrity", {}).get("sha256") == stable_sha256(value)
 def result(status: str, event: dict[str, Any] | None = None, release: datetime | None = None, *, path: Path | None = None, created: bool = False, snapshot: dict[str, Any] | None = None, calendar_sha: str | None = None) -> LockResult:
     return LockResult(status, event.get("event_id") if event else None, event.get("reference_period") if event else None, iso_utc(release) if release else None, iso_kst(release) if release else None, path.as_posix() if path else None, created, snapshot.get("integrity", {}).get("sha256") if snapshot else None, calendar_sha, event.get("consensus_source") if event else None, event.get("entered_at_utc") if event else None, snapshot.get("metrics", {}) if snapshot else {}, (path.as_posix(),) if created and path else ())
-def lock_consensus(root: Path, *, event_id: str, events_path: Path, output_root: Path, locked_at_utc: str, now_utc: datetime | None = None) -> LockResult:
+def lock_consensus(root: Path, *, event_id: str, events_path: Path, output_root: Path, locked_at_utc: str, now_utc: datetime | None = None, observation_provenance: dict[str, Any] | None = None) -> LockResult:
     root = root.resolve(); now = (now_utc or datetime.now(timezone.utc)).astimezone(timezone.utc); locked_at = parse_utc(locked_at_utc, "locked_at_utc")
     if locked_at > now: raise PpiConsensusLockError("locked_at_utc must not be future")
     original = events_path.read_bytes(); calendar = read_calendar(events_path)
@@ -104,7 +105,7 @@ def lock_consensus(root: Path, *, event_id: str, events_path: Path, output_root:
         if str(exc) == "window expired": return result("PPI_CONSENSUS_LOCK_WINDOW_EXPIRED")
         raise
     if locked_at >= release: raise PpiConsensusLockError("locked_at_utc must be before release")
-    path = output_path(root, output_root, event_id); snapshot = build_snapshot(event, release, values, sha256_bytes(original), locked_at)
+    path = output_path(root, output_root, event_id); snapshot = build_snapshot(event, release, values, sha256_bytes(original), locked_at, observation_provenance)
     if path.exists():
         try: existing = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError): return result("PPI_CONSENSUS_SNAPSHOT_INTEGRITY_ERROR", event, release, path=path)
