@@ -1,51 +1,111 @@
 name: Notify PPI Processing
+
 on:
   workflow_dispatch:
   workflow_run:
     workflows: [Process PPI Release]
     types: [completed]
+
 permissions:
   actions: read
   contents: read
   issues: write
+
 concurrency:
   group: notify-ppi-processing
   cancel-in-progress: false
+
 jobs:
   notify:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
+
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - uses: actions/download-artifact@v4
+
+      - name: Download triggering PPI processing result
+        if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' }}
+        uses: actions/download-artifact@v4
         continue-on-error: true
         with:
           name: ppi-processing-result
-          path: upstream
-      - run: |
+          path: upstream-artifact
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build notification result
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          WORKFLOW_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
           python - <<'PY'
           import json
+          import os
           from pathlib import Path
-          from scripts.automation.build_ppi_notification import build_notification
-          path=Path('upstream/ppi-processing-result.json')
-          result=json.loads(path.read_text()) if path.is_file() else {'status':'ARTIFACT_MISSING'}
-          Path('ppi-notification-result.json').write_text(json.dumps(build_notification(result),indent=2)+'\n')
+
+          from scripts.automation.build_ppi_notification import (
+              build_manual_dispatch_notification,
+              build_notification,
+          )
+
+          if os.environ["EVENT_NAME"] == "workflow_dispatch":
+              notification = build_manual_dispatch_notification()
+          else:
+              path = Path("upstream-artifact/ppi-processing-result.json")
+              result = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {"status": "ARTIFACT_MISSING"}
+              notification = build_notification(
+                  result,
+                  workflow_conclusion=os.environ["WORKFLOW_CONCLUSION"],
+                  workflow_run_id=os.environ["WORKFLOW_RUN_ID"],
+                  repository=os.environ["REPOSITORY"],
+              )
+
+          Path("ppi-notification-result.json").write_text(
+              json.dumps(notification, indent=2) + "\n", encoding="utf-8"
+          )
           PY
-      - uses: actions/github-script@v7
-        if: ${{ hashFiles('ppi-notification-result.json') != '' }}
+
+      - name: Create or update PPI processing Issue
+        if: ${{ github.event_name == 'workflow_run' && hashFiles('ppi-notification-result.json') != '' }}
+        uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
             const result = JSON.parse(fs.readFileSync('ppi-notification-result.json', 'utf8'));
             if (result.status !== 'NOTIFICATION_READY') return;
             const marker = `<!-- automation-key: ${result.dedupe_key} -->`;
-            const issues = await github.paginate(github.rest.issues.listForRepo, {owner: context.repo.owner, repo: context.repo.repo, state: 'all'});
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'all',
+            });
             const matches = issues.filter(issue => (issue.body || '').includes(marker));
-            if (matches.length > 1) core.setFailed('DUPLICATE_ISSUE_CONFLICT');
-            else if (matches.length === 0) await github.rest.issues.create({owner: context.repo.owner, repo: context.repo.repo, title: result.title, body: `${marker}\n${result.body}`, labels: result.labels});
-            else await github.rest.issues.update({owner: context.repo.owner, repo: context.repo.repo, issue_number: matches[0].number, title: result.title, body: `${marker}\n${result.body}`});
+            if (matches.length > 1) {
+              core.setFailed('DUPLICATE_ISSUE_CONFLICT');
+            } else if (matches.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: result.title,
+                body: `${marker}\n${result.body}`,
+                labels: result.labels,
+              });
+            } else if (matches[0].body !== `${marker}\n${result.body}`) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: matches[0].number,
+                title: result.title,
+                body: `${marker}\n${result.body}`,
+              });
+            }
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
