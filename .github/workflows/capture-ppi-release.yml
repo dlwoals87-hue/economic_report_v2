@@ -1,0 +1,71 @@
+name: Capture PPI Release
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/15 * * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: capture-ppi-release
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Run calendar-gated PPI capture
+        run: python scripts/automation/run_due_ppi_capture.py --result-json ppi-capture-result.json
+      - name: Validate result and stage captured release only
+        id: result
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path, PurePosixPath
+          result = json.loads(Path('ppi-capture-result.json').read_text(encoding='utf-8'))
+          status = result['status']
+          paths = result.get('commit_paths') or []
+          captured = status == 'CAPTURED'
+          if captured:
+              if len(paths) != 1:
+                  raise SystemExit('CAPTURED requires exactly one commit path')
+              path = paths[0]
+              pure = PurePosixPath(path)
+              event_id = result.get('event_id')
+              expected = f'data/releases/ppi/{event_id}/as_released.json'
+              if pure.is_absolute() or '..' in pure.parts or path != expected:
+                  raise SystemExit('unsafe PPI release path')
+              target = Path(path)
+              if not target.is_file() or target.is_symlink():
+                  raise SystemExit('missing or symlink PPI release')
+              payload = json.loads(target.read_text(encoding='utf-8'))
+              if not payload.get('integrity', {}).get('sha256'):
+                  raise SystemExit('PPI release integrity missing')
+              with Path(os.environ['GITHUB_OUTPUT']).open('a', encoding='utf-8') as output:
+                  output.write(f'commit_path={path}\n')
+          elif paths:
+              raise SystemExit('no-op result must not contain commit paths')
+          with Path(os.environ['GITHUB_OUTPUT']).open('a', encoding='utf-8') as output:
+              output.write(f'captured={str(captured).lower()}\n')
+          PY
+      - name: Commit captured PPI release
+        if: steps.result.outputs.captured == 'true'
+        run: |
+          git add -- "${{ steps.result.outputs.commit_path }}"
+          git diff --cached --quiet || git commit -m "Capture PPI release"
+          git push
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ppi-capture-result
+          path: ppi-capture-result.json
+          if-no-files-found: warn
