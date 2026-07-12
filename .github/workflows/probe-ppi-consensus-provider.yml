@@ -1,0 +1,38 @@
+name: Probe PPI Consensus Provider
+
+on:
+  workflow_dispatch:
+    inputs:
+      event_id:
+        required: true
+        default: US_PPI_2026_06
+        type: string
+      now_utc:
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Probe provider
+        env:
+          TRADING_ECONOMICS_API_KEY: ${{ secrets.TRADING_ECONOMICS_API_KEY }}
+        run: |
+          python -B scripts/automation/probe_ppi_consensus_provider.py --event-id "${{ inputs.event_id }}" --now-utc "${{ inputs.now_utc }}" --result-json ppi-consensus-provider-probe-result.json
+      - name: Summary
+        run: |
+          python -B -c "import json; d=json.load(open('ppi-consensus-provider-probe-result.json')); print({k:d.get(k) for k in ('status','event_id','provider','normalized_status','metrics_available','missing_metrics','external_api_called','safe_to_enable_automation','next_action')})" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ppi-consensus-provider-probe
+          path: ppi-consensus-provider-probe-result.json
+          retention-days: 7
