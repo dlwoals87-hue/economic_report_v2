@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
+import argparse
 from pathlib import Path
 from typing import Any
 
@@ -21,4 +22,12 @@ def run_pending(root: Path,event_id: str|None=None)->dict[str,Any]:
 
 
 if __name__ == "__main__":
-    print(json.dumps(run_pending(PROJECT_ROOT), ensure_ascii=False))
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--result-json")
+    args = parser.parse_args()
+    result = run_pending(PROJECT_ROOT)
+    if args.result_json:
+        path = Path(args.result_json)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps(result, ensure_ascii=False))

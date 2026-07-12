@@ -1,0 +1,55 @@
+name: Process PPI Release
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: [Capture PPI Release]
+    types: [completed]
+permissions:
+  contents: write
+concurrency:
+  group: process-ppi-release
+  cancel-in-progress: false
+jobs:
+  process:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python scripts/automation/run_pending_ppi_processing.py --result-json ppi-processing-result.json
+      - id: result
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path, PurePosixPath
+          r=json.loads(Path('ppi-processing-result.json').read_text())
+          status=r['status']; paths=r.get('commit_paths') or []
+          allowed={f"data/generated/ppi/{r.get('event_id')}/canonical.json",f"data/analysis/ppi/{r.get('event_id')}/analysis.json",f"docs/reports/ppi/{r.get('event_id')}.html",'docs/index.html'}
+          if status in {'NO_PENDING_PPI_EVENT','ALREADY_PROCESSED'}: paths=[]
+          elif status=='INDEX_ONLY_RESUMED':
+              if paths != ['docs/index.html']: raise SystemExit('index-only path invalid')
+          elif status=='PROCESSED_AND_INDEXED':
+              if not paths or len(paths)>4: raise SystemExit('processed paths invalid')
+          elif status in {'MULTIPLE_PENDING_PPI_EVENTS','PPI_PROCESSING_CONFLICT','PPI_PROCESSING_INTEGRITY_ERROR','PPI_RELEASE_NOT_FOUND','PPI_RELEASE_INTEGRITY_ERROR'}: raise SystemExit(status)
+          else: raise SystemExit('unknown status')
+          for path in paths:
+              p=PurePosixPath(path)
+              if p.is_absolute() or '..' in p.parts or path not in allowed or not Path(path).is_file() or Path(path).is_symlink(): raise SystemExit('unsafe commit path')
+          with Path(os.environ['GITHUB_OUTPUT']).open('a') as out:
+              out.write('paths='+' '.join(paths)+'\n'); out.write('commit='+str(bool(paths)).lower()+'\n')
+          PY
+      - if: steps.result.outputs.commit == 'true'
+        run: |
+          git add -- ${{ steps.result.outputs.paths }}
+          git diff --cached --quiet || git commit -m "chore: process PPI release"
+          git push
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ppi-processing-result
+          path: ppi-processing-result.json
