@@ -327,7 +327,10 @@ def _parse_entries(managed: str) -> list[ReportEntry]:
 def _validate_entry_shape(entry: ReportEntry) -> None:
     if EVENT_ID_RE.fullmatch(entry.event_id) is None:
         raise ReportIndexError("INDEX_UPDATE_FAILED", "managed event_id is invalid")
-    if entry.report_href != f"reports/{entry.event_id}.html":
+    expected_hrefs = {f"reports/{entry.event_id}.html"}
+    if entry.event_id.startswith("US_PPI_"):
+        expected_hrefs.add(f"reports/ppi/{entry.event_id}.html")
+    if entry.report_href not in expected_hrefs:
         raise ReportIndexError("INDEX_UPDATE_FAILED", "managed report href is invalid")
     if SHA256_RE.fullmatch(entry.report_sha256) is None:
         raise ReportIndexError("INDEX_UPDATE_FAILED", "managed report SHA-256 is invalid")
