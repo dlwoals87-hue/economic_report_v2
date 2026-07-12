@@ -24,7 +24,7 @@ class PpiReadinessTests(unittest.TestCase):
         temporary, root = self.setup()
         with temporary:
             result = readiness.check_readiness(root, EVENT_ID, now_utc=NOW, static_checks=lambda *_: [])
-            self.assertEqual(result.status,"READINESS_PASS"); self.assertEqual(result.capture_readiness,"READY"); self.assertEqual(result.consensus_readiness,"CONSENSUS_NOT_READY"); self.assertFalse(result.blocking_errors); self.assertIn("expected values", " ".join(result.warnings))
+            self.assertEqual(result.status,"READINESS_PASS"); self.assertEqual(result.capture_readiness,"READY"); self.assertEqual(result.consensus_readiness,"CONSENSUS_NOT_READY"); self.assertFalse(result.blocking_errors); self.assertIn("expected values", " ".join(result.warnings)); actions=" ".join(result.next_actions).lower(); self.assertIn("provider",actions); self.assertIn("collector",actions); self.assertIn("normalize",actions); self.assertIn("snapshot",actions); self.assertNotIn("human review",actions); self.assertNotIn("apply",actions); self.assertNotIn("set_ppi_consensus",actions)
     def test_complete_unlocked_and_locked_states(self):
         temporary, root = self.setup(complete=True)
         with temporary:
@@ -41,4 +41,3 @@ class PpiReadinessTests(unittest.TestCase):
         temporary, root = self.setup()
         with temporary:
             before=(root/"data/calendar/events.json").read_bytes(); result=readiness.check_readiness(root,EVENT_ID,now_utc=NOW,static_checks=lambda *_:["collector missing"]); self.assertEqual(result.status,"READINESS_FAIL"); self.assertEqual(before,(root/"data/calendar/events.json").read_bytes()); self.assertFalse(result.external_api_called); self.assertFalse(result.external_ai_api_called)
-

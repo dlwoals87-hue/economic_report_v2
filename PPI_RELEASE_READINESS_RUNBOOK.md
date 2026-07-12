@@ -1,3 +1,3 @@
 # PPI Release Readiness
 
-Run the diagnostic before the PPI release. It is read-only and separately reports capture, consensus, processing, notification, and overall readiness. Missing expected values are a warning, not a capture blocker; enter, preview, apply, and lock consensus later when official market expectations are available.
+Run the diagnostic before the PPI release. It is read-only and separately reports capture, consensus, processing, notification, and overall readiness. Normal PPI expected-value operation is automated collection through the economic-calendar consensus API, followed by one-provider-response normalization, complete validation, and immutable snapshot creation. `set_ppi_consensus.py` is an administrator fallback only, not a normal operating step. Missing API consensus does not block actual capture; it limits surprise analysis. The next development stage is the 5.3G-1 consensus API provider adapter.
