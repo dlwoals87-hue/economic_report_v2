@@ -57,6 +57,44 @@
       "consensus_source": null,
       "consensus_status": "not_entered",
       "entered_at_utc": null
+    },
+    {
+      "event_id": "US_PPI_2026_06",
+      "indicator_type": "PPI",
+      "country": "US",
+      "reference_period": "2026-06",
+      "release_datetime_utc": "2026-07-15T12:30:00Z",
+      "metrics": {
+        "headline_mom": {
+          "expected": null,
+          "unit": "%"
+        },
+        "headline_yoy": {
+          "expected": null,
+          "unit": "%"
+        },
+        "core_mom": {
+          "expected": null,
+          "unit": "%"
+        },
+        "core_yoy": {
+          "expected": null,
+          "unit": "%"
+        }
+      },
+      "consensus_status": "not_entered",
+      "consensus_source": null,
+      "entered_at_utc": null,
+      "schedule_source": {
+        "url": "https://www.bls.gov/schedule/news_release/ppi.htm",
+        "checked_at_utc": "2026-07-12T07:52:03Z"
+      },
+      "approval": {
+        "status": "approved",
+        "approved_by": "dlwoals87-hue",
+        "approved_at_utc": "2026-07-12T08:09:20Z"
+      },
+      "source_candidate_sha256": "abd3189bb23a6e29a05eb99191109b9866c9747b3f1dca9fe1b1210a8b27285d"
     }
   ]
 }
