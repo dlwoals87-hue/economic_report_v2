@@ -18,6 +18,7 @@ from scripts.validators import validate_calendar_events  # noqa: E402
 
 PPI_METRICS = ("headline_mom", "headline_yoy", "core_mom", "core_yoy")
 EVENT_RE = re.compile(r"US_PPI_(\d{4})_(0[1-9]|1[0-2])\Z")
+LIVE_BLS_PATH_ERROR = "PPI_LIVE_BLS_PATH_NOT_ENABLED"
 
 @dataclass(frozen=True)
 class ReadinessResult:
@@ -39,7 +40,27 @@ def static_contract(root: Path, _: dict[str, Any]) -> list[str]:
         if not path.is_file() or any(token not in path.read_text(encoding="utf-8") for token in needed): errors.append(f"workflow contract {name}")
     notify=root/".github/workflows/notify-ppi-processing.yml"
     if notify.is_file() and "contents: write" in notify.read_text(encoding="utf-8"): errors.append("notification contents write")
+    errors.extend(live_bls_path_errors(root))
     return errors
+
+
+def live_bls_path_errors(root: Path) -> list[str]:
+    workflow = root / ".github/workflows/capture-ppi-release.yml"
+    runner = root / "scripts/automation/run_due_ppi_capture.py"
+    pipeline = root / "scripts/pipelines/capture_ppi_release.py"
+    try:
+        workflow_text = workflow.read_text(encoding="utf-8")
+        runner_text = runner.read_text(encoding="utf-8")
+        pipeline_text = pipeline.read_text(encoding="utf-8")
+    except OSError:
+        return [LIVE_BLS_PATH_ERROR]
+    required = (
+        "run_due_ppi_capture.py --enable-live-bls",
+        'add_argument("--enable-live-bls", action="store_true")',
+        "use_live_bls=enable_live_bls",
+        "use_live_bls: bool = False",
+    )
+    return [] if all(token in text for token, text in zip(required, (workflow_text, runner_text, runner_text, pipeline_text))) else [LIVE_BLS_PATH_ERROR]
 def event_contract(root: Path,event_id: str) -> tuple[dict[str,Any],datetime,list[str]]:
     payload=json.loads((root/"data/calendar/events.json").read_text(encoding="utf-8")); validation=validate_calendar_events.validate_events_payload(payload)
     errors=[] if validation.valid else ["calendar invalid"]
@@ -69,7 +90,7 @@ def check_readiness(root: Path,event_id: str,*,now_utc: datetime|None=None,stati
             except Exception: integrity="invalid"; errors.append("consensus snapshot integrity or calendar mismatch")
         else: errors.append("consensus state invalid")
     if time_state=="CAPTURE_WINDOW_EXPIRED" and not (root/"data/releases/ppi"/event_id/"as_released.json").exists(): errors.append("capture window expired without as_released data")
-    status="READINESS_FAIL" if errors else "READINESS_PASS"; checks={"capture":not any("capture" in e or "collector" in e or "workflow contract .github/workflows/capture" in e for e in errors),"processing":not any("process" in e for e in errors),"notification":not any("notification" in e for e in errors)}
+    status="READINESS_FAIL" if errors else "READINESS_PASS"; checks={"capture":not any("capture" in e or "collector" in e or "workflow contract .github/workflows/capture" in e or e == LIVE_BLS_PATH_ERROR for e in errors),"processing":not any("process" in e for e in errors),"notification":not any("notification" in e for e in errors)}
     next_actions=("Verify the consensus provider API configuration.","Run the automated PPI consensus collector.","Normalize all expected values from one provider response.","Validate complete consensus, create the immutable snapshot, then rerun readiness.") if consensus=="CONSENSUS_NOT_READY" else ()
     return ReadinessResult(status,event_id,event.get("reference_period") if event else None,release.isoformat().replace("+00:00","Z") if event else None,release.astimezone(ZoneInfo("Asia/Seoul")).isoformat() if event else None,time_state,"READY" if checks["capture"] else "NOT_READY",consensus,"READY" if checks["processing"] else "NOT_READY","READY" if checks["notification"] else "NOT_READY",tuple(errors),tuple(warnings),checks,expected,exists,integrity,next_actions=next_actions)
 def main(argv=None)->int:

@@ -41,3 +41,19 @@ class PpiReadinessTests(unittest.TestCase):
         temporary, root = self.setup()
         with temporary:
             before=(root/"data/calendar/events.json").read_bytes(); result=readiness.check_readiness(root,EVENT_ID,now_utc=NOW,static_checks=lambda *_:["collector missing"]); self.assertEqual(result.status,"READINESS_FAIL"); self.assertEqual(before,(root/"data/calendar/events.json").read_bytes()); self.assertFalse(result.external_api_called); self.assertFalse(result.external_ai_api_called)
+
+    def test_live_bls_path_contract_is_blocking_when_any_link_is_missing(self):
+        temporary, root = self.setup()
+        with temporary:
+            workflow=root/".github/workflows"; runner=root/"scripts/automation"; pipeline=root/"scripts/pipelines"
+            workflow.mkdir(parents=True); runner.mkdir(parents=True); pipeline.mkdir(parents=True)
+            workflow_path=workflow/"capture-ppi-release.yml"; runner_path=runner/"run_due_ppi_capture.py"; pipeline_path=pipeline/"capture_ppi_release.py"
+            workflow_path.write_text("run_due_ppi_capture.py --enable-live-bls",encoding="utf-8")
+            runner_path.write_text('add_argument("--enable-live-bls", action="store_true")\nuse_live_bls=enable_live_bls',encoding="utf-8")
+            pipeline_path.write_text("use_live_bls: bool = False",encoding="utf-8")
+            self.assertFalse(readiness.live_bls_path_errors(root))
+            for path, text in ((workflow_path,"run_due_ppi_capture.py"),(runner_path,'add_argument("--enable-live-bls", action="store_true")'),(pipeline_path,"use_live_bls: bool = True")):
+                original=path.read_text(encoding="utf-8"); path.write_text(text,encoding="utf-8")
+                result=readiness.check_readiness(root,EVENT_ID,now_utc=NOW,static_checks=lambda candidate, _: readiness.live_bls_path_errors(candidate))
+                self.assertEqual(result.status,"READINESS_FAIL"); self.assertEqual(result.capture_readiness,"NOT_READY"); self.assertIn(readiness.LIVE_BLS_PATH_ERROR,result.blocking_errors)
+                path.write_text(original,encoding="utf-8")

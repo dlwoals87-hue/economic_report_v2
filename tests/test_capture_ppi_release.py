@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import inspect
 import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
@@ -22,6 +23,9 @@ def response(value="101"):
 
 
 class PpiCaptureTests(unittest.TestCase):
+    def test_live_bls_default_is_disabled(self):
+        self.assertFalse(inspect.signature(capture.capture_release).parameters["use_live_bls"].default)
+
     def run_in_temp(self, callback):
         with tempfile.TemporaryDirectory() as temporary:
             root=Path(temporary)/"project"; events=root/"events.json"; events.parent.mkdir(); events.write_text(json.dumps({"events":[event()]}),encoding="utf-8")

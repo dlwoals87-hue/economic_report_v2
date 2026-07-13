@@ -22,7 +22,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Run calendar-gated PPI capture
-        run: python scripts/automation/run_due_ppi_capture.py --result-json ppi-capture-result.json
+        run: python scripts/automation/run_due_ppi_capture.py --enable-live-bls --result-json ppi-capture-result.json
       - name: Validate result and stage captured release only
         id: result
         shell: bash
