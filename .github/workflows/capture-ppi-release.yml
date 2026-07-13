@@ -59,9 +59,46 @@ jobs:
           PY
       - name: Commit captured PPI release
         if: steps.result.outputs.captured == 'true'
+        env:
+          COMMIT_PATH: ${{ steps.result.outputs.commit_path }}
+          STAGED_PATHS_FILE: ${{ runner.temp }}/ppi_staged_paths.txt
+          STAGED_STATUS_FILE: ${{ runner.temp }}/ppi_staged_status.txt
         run: |
-          git add -- "${{ steps.result.outputs.commit_path }}"
-          git diff --cached --quiet || git commit -m "Capture PPI release"
+          git add -- "$COMMIT_PATH"
+          git diff --cached --name-only > "$STAGED_PATHS_FILE"
+          git diff --cached --name-status > "$STAGED_STATUS_FILE"
+          python - <<'PY'
+          import os
+          from pathlib import Path, PurePosixPath
+
+          expected = os.environ["COMMIT_PATH"]
+          staged = [
+              line.strip()
+              for line in Path(os.environ["STAGED_PATHS_FILE"]).read_text(encoding="utf-8").splitlines()
+              if line.strip()
+          ]
+          statuses = [
+              line.strip().split("\t", 1)
+              for line in Path(os.environ["STAGED_STATUS_FILE"]).read_text(encoding="utf-8").splitlines()
+              if line.strip()
+          ]
+          pure = PurePosixPath(expected)
+
+          if pure.is_absolute() or ".." in pure.parts or "\\" in expected:
+              raise SystemExit("unsafe expected PPI release path")
+          if len(staged) != 1 or len(set(staged)) != 1:
+              raise SystemExit("exactly one unique PPI release path must be staged")
+          if staged != [expected]:
+              raise SystemExit("staged paths do not match commit path")
+          if len(statuses) != 1 or statuses[0] != ["A", expected]:
+              raise SystemExit("PPI release must be staged as a new file")
+          path = Path(expected)
+          if not path.is_file() or path.is_symlink():
+              raise SystemExit("staged PPI release is not a regular file")
+          if len(pure.parts) != 5 or pure.parts[:3] != ("data", "releases", "ppi") or pure.parts[-1] != "as_released.json":
+              raise SystemExit("unexpected PPI release path")
+          PY
+          git commit -m "Capture PPI release"
           git push
       - uses: actions/upload-artifact@v4
         if: always()
