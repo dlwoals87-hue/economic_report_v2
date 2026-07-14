@@ -1,0 +1,85 @@
+{
+  "schema_version": "1.0",
+  "meta": {
+    "event_id": "US_CPI_2026_06",
+    "indicator_type": "CPI",
+    "indicator_name": "미국 소비자물가지수",
+    "country": "US",
+    "reference_period": "2026-06",
+    "release_datetime_utc": "2026-07-14T12:30:00Z",
+    "release_datetime_kst": "2026-07-14T21:30:00+09:00",
+    "is_sample": false,
+    "data_origin": "bls_release_capture",
+    "data_status": "release_captured",
+    "analysis_status": "pending"
+  },
+  "event": {
+    "headline": {
+      "mom": {
+        "actual_as_released_raw": "-0.42248165303806526757670392449825",
+        "actual_as_released_display": "-0.4%",
+        "previous_as_released_raw": "0.4729142286413944351352408342785",
+        "previous_as_released_display": "0.5%",
+        "expected": null,
+        "unit": "%",
+        "surprise": null
+      },
+      "yoy": {
+        "actual_as_released_raw": "3.531425063786384590821581034285",
+        "actual_as_released_display": "3.5%",
+        "previous_as_released_raw": "4.2486740391644502511937535968146",
+        "previous_as_released_display": "4.2%",
+        "expected": null,
+        "unit": "%",
+        "surprise": null
+      }
+    },
+    "core": {
+      "mom": {
+        "actual_as_released_raw": "-0.01666066684319039869570779570452",
+        "actual_as_released_display": "-0.0%",
+        "previous_as_released_raw": "0.208095449626292770620977094594",
+        "previous_as_released_display": "0.2%",
+        "expected": null,
+        "unit": "%",
+        "surprise": null
+      },
+      "yoy": {
+        "actual_as_released_raw": "2.5940724318134752896176194710748",
+        "actual_as_released_display": "2.6%",
+        "previous_as_released_raw": "2.8509140206834010668409112421338",
+        "previous_as_released_display": "2.9%",
+        "expected": null,
+        "unit": "%",
+        "surprise": null
+      }
+    },
+    "consensus": {
+      "source": null,
+      "status": "not_locked",
+      "entered_at_utc": null,
+      "locked_at_utc": null,
+      "consensus_snapshot_path": null,
+      "consensus_snapshot_sha256": null
+    }
+  },
+  "source": {
+    "provider": "U.S. Bureau of Labor Statistics",
+    "release_capture_path": "data/releases/cpi/US_CPI_2026_06/as_released.json",
+    "release_capture_sha256": "1e304ea4f78b05428f1c2cc505a1de92c56fc574d4fbad3cff8f75e5915fdb3c",
+    "release_vintage": "first_observed_after_release",
+    "captured_at_utc": "2026-07-14T14:08:53.379992Z",
+    "raw_snapshot_path": "data/raw/bls/cpi/2026-06/retrieved_20260714T140853Z.json",
+    "request_mode": "unregistered",
+    "consensus_snapshot_path": null,
+    "consensus_snapshot_sha256": null
+  },
+  "analysis": {
+    "status": "pending",
+    "provider": null,
+    "model": null,
+    "generated_at_utc": null,
+    "summary_html": null,
+    "key_points": []
+  }
+}
