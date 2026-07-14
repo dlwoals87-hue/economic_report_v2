@@ -197,7 +197,9 @@ class GitHubCpiWorkflowTests(unittest.TestCase):
 
     def test_staged_files_are_rechecked_after_git_add(self):
         self.assertIn("git diff --cached --name-only", self.text)
+        self.assertIn("git diff --cached --name-status", self.text)
         self.assertIn("STAGED_PATHS_FILE", self.text)
+        self.assertIn("STAGED_STATUS_FILE", self.text)
         self.assertLess(
             self.text.index("git add --"),
             self.text.index("git diff --cached --name-only"),
@@ -209,10 +211,13 @@ class GitHubCpiWorkflowTests(unittest.TestCase):
             self.text.index("git commit -m"),
         )
 
-    def test_staged_files_must_match_commit_paths(self):
-        self.assertIn("set(staged) != set(expected)", self.text)
+    def test_staged_files_must_be_safe_candidate_subset(self):
+        self.assertIn("set(staged).issubset(set(expected))", self.text)
         self.assertIn("unexpected staged files", self.text)
-        self.assertIn("expected paths not staged", self.text)
+        self.assertIn("CPI_IMMUTABLE_RELEASE_NOT_STAGED", self.text)
+        self.assertIn("CPI_RAW_SNAPSHOT_NOT_STAGED", self.text)
+        self.assertIn('status_code not in {"A", "M"}', self.text)
+        self.assertIn("immutable capture artifact must be added", self.text)
 
     def test_staged_file_count_is_limited(self):
         self.assertIn("too many staged paths", self.text)
