@@ -125,7 +125,10 @@ jobs:
                       raise SystemExit(f"secret value found in file: {item}")
 
           paths_file = Path(os.environ["COMMIT_PATHS_FILE"])
-          paths_file.write_text("\n".join(commit_paths), encoding="utf-8")
+          content = "\n".join(commit_paths)
+          if content:
+              content += "\n"
+          paths_file.write_text(content, encoding="utf-8")
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
               output.write(f"should_commit={'true' if status == 'CAPTURED' else 'false'}\n")
               output.write(f"event_id={event_id or ''}\n")
@@ -141,7 +144,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          while IFS= read -r path; do
+          while IFS= read -r path || [ -n "$path" ]; do
             [ -n "$path" ] || continue
             git add -- "$path"
           done < "$COMMIT_PATHS_FILE"

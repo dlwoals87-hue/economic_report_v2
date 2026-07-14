@@ -9,6 +9,17 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "capture-cpi-release.yml"
 
 
+def bash_read_paths(content: str, *, eof_guard: bool) -> list[str]:
+    paths = []
+    for line in content.splitlines(keepends=True):
+        has_newline = line.endswith("\n")
+        path = line[:-1] if has_newline else line
+        if has_newline or (eof_guard and path):
+            if path:
+                paths.append(path)
+    return paths
+
+
 class GitHubCpiWorkflowTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -204,6 +215,21 @@ class GitHubCpiWorkflowTests(unittest.TestCase):
             self.text.index("git add --"),
             self.text.index("git diff --cached --name-only"),
         )
+
+    def test_commit_paths_keep_last_path_with_or_without_terminal_newline(self):
+        paths = [
+            "data/releases/cpi/US_CPI_2026_06/as_released.json",
+            "data/raw/bls/cpi/2026-06/retrieved_20260714T140853Z.json",
+            "data/processed/bls/cpi_latest.json",
+        ]
+        without_newline = "\n".join(paths)
+        with_newline = without_newline + "\n"
+        self.assertEqual(bash_read_paths(without_newline, eof_guard=False), paths[:-1])
+        self.assertEqual(bash_read_paths(without_newline, eof_guard=True), paths)
+        self.assertEqual(bash_read_paths(with_newline, eof_guard=False), paths)
+        self.assertIn('content = "\\n".join(commit_paths)', self.text)
+        self.assertIn('content += "\\n"', self.text)
+        self.assertIn('while IFS= read -r path || [ -n "$path" ]; do', self.text)
 
     def test_staged_recheck_runs_before_commit(self):
         self.assertLess(

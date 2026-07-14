@@ -9,6 +9,17 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "process-cpi-release.yml"
 
 
+def bash_read_paths(content: str, *, eof_guard: bool) -> list[str]:
+    paths = []
+    for line in content.splitlines(keepends=True):
+        has_newline = line.endswith("\n")
+        path = line[:-1] if has_newline else line
+        if has_newline or (eof_guard and path):
+            if path:
+                paths.append(path)
+    return paths
+
+
 class GitHubCpiProcessingWorkflowTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -141,6 +152,20 @@ class GitHubCpiProcessingWorkflowTests(unittest.TestCase):
         self.assertIn("set(staged) != set(expected)", commit)
         self.assertLess(commit.index("git add --"), commit.index("git diff --cached --name-only"))
         self.assertLess(commit.index("git diff --cached --name-only"), commit.index("git commit -m"))
+
+    def test_26a_commit_paths_keep_index_when_it_is_the_last_line(self):
+        paths = [
+            "data/generated/cpi/US_CPI_2026_06/canonical_release.json",
+            "data/analysis/cpi/US_CPI_2026_06/cpi-analysis-v1.json",
+            "docs/reports/US_CPI_2026_06.html",
+            "docs/index.html",
+        ]
+        without_newline = "\n".join(paths)
+        self.assertEqual(bash_read_paths(without_newline, eof_guard=False), paths[:-1])
+        self.assertEqual(bash_read_paths(without_newline, eof_guard=True), paths)
+        commit = self.step_block("Commit processed CPI report")
+        self.assertIn('while IFS= read -r path || [ -n "$path" ]; do', commit)
+        self.assertIn('content += "\\n"', self.step_block("Validate processing result"))
 
     def test_27_automatic_commit_is_limited_to_four_files(self):
         self.assertIn("1 <= len(commit_paths) <= 4", self.text)
