@@ -1,0 +1,198 @@
+{
+  "schema_version": "1.0",
+  "analysis_version": "cpi-analysis-v1",
+  "event_id": "US_CPI_2026_06",
+  "indicator_type": "CPI",
+  "generated_at_utc": "2026-07-14T14:28:03.091862Z",
+  "input": {
+    "canonical_path": "data/generated/cpi/US_CPI_2026_06/canonical_release.json",
+    "canonical_sha256": "0ebbfefb904a9124ac8a3e5710163321c375c839fc08c7d82c31dcf3aa32255a",
+    "release_capture_sha256": "1e304ea4f78b05428f1c2cc505a1de92c56fc574d4fbad3cff8f75e5915fdb3c"
+  },
+  "provider": {
+    "name": "rule_based",
+    "requested_provider": "rule_based",
+    "model_requested": null,
+    "model_returned": null,
+    "response_id": null,
+    "external_api_called": false,
+    "fallback_used": false,
+    "fallback_reason": null
+  },
+  "versions": {
+    "prompt": "cpi_analysis_v1",
+    "prompt_sha256": "7ef8f64ac84005846f9179ab0674175ce91ac5021784574e91ac700118dc686d",
+    "schema": "cpi_analysis_v1",
+    "schema_sha256": "1340c22779a405900e9efc4c4a805af951d121fbf25cf761474322f4acfdd37a"
+  },
+  "facts": {
+    "event_id": "US_CPI_2026_06",
+    "reference_period": "2026-06",
+    "release_datetime_kst": "2026-07-14T21:30:00+09:00",
+    "metrics": {
+      "headline_mom": {
+        "actual": "-0.42248165303806526757670392449825",
+        "actual_display": "-0.4%",
+        "previous": "0.4729142286413944351352408342785",
+        "previous_display": "0.5%",
+        "expected": null,
+        "surprise": null,
+        "change_from_previous_raw": "-0.89539588167945970271194475877675",
+        "momentum_direction": "decelerating"
+      },
+      "headline_yoy": {
+        "actual": "3.531425063786384590821581034285",
+        "actual_display": "3.5%",
+        "previous": "4.2486740391644502511937535968146",
+        "previous_display": "4.2%",
+        "expected": null,
+        "surprise": null,
+        "change_from_previous_raw": "-0.7172489753780656603721725625296",
+        "momentum_direction": "decelerating"
+      },
+      "core_mom": {
+        "actual": "-0.01666066684319039869570779570452",
+        "actual_display": "-0.0%",
+        "previous": "0.208095449626292770620977094594",
+        "previous_display": "0.2%",
+        "expected": null,
+        "surprise": null,
+        "change_from_previous_raw": "-0.22475611646948316931668489029852",
+        "momentum_direction": "decelerating"
+      },
+      "core_yoy": {
+        "actual": "2.5940724318134752896176194710748",
+        "actual_display": "2.6%",
+        "previous": "2.8509140206834010668409112421338",
+        "previous_display": "2.9%",
+        "expected": null,
+        "surprise": null,
+        "change_from_previous_raw": "-0.256841588869925777223291771059",
+        "momentum_direction": "decelerating"
+      }
+    },
+    "consensus_available": false,
+    "allowed_percentage_tokens": [
+      "-0.4%",
+      "0.5%",
+      "3.5%",
+      "4.2%",
+      "-0.0%",
+      "0.2%",
+      "2.6%",
+      "2.9%"
+    ],
+    "allowed_percentage_point_tokens": []
+  },
+  "analysis": {
+    "language": "ko",
+    "executive_summary": {
+      "one_line": "CPI 지표는 직전 발표 대비 물가 모멘텀 둔화 방향을 나타냈다.",
+      "detail": "이 평가는 입력된 최초 발표값과 직전 발표값의 방향만 기계적으로 비교한 결과다. 시장 반응이나 입력에 없는 세부 항목은 판단에 포함하지 않았다."
+    },
+    "inflation_interpretation": {
+      "headline": "헤드라인 물가 전월비와 전년비 모두 직전 발표보다 물가 상승 모멘텀이 둔화됐다.",
+      "core": "근원 물가 전월비와 전년비 모두 직전 발표보다 물가 상승 모멘텀이 둔화됐다.",
+      "momentum": "직전 발표 대비 네 지표의 결정적 방향을 종합한 기계적 해석이다."
+    },
+    "policy_implication": {
+      "signal": "dovish",
+      "explanation": "정책 신호는 물가 모멘텀 둔화 방향으로 분류됐다. 이는 CPI 모멘텀 방향만 사용하는 기계적 해석이며 실제 정책 결정을 예측하지 않는다.",
+      "evidence_paths": [
+        "facts.metrics.headline_mom.momentum_direction",
+        "facts.metrics.headline_yoy.momentum_direction",
+        "facts.metrics.core_mom.momentum_direction",
+        "facts.metrics.core_yoy.momentum_direction"
+      ]
+    },
+    "key_points": [
+      {
+        "title": "헤드라인 전월비 흐름",
+        "detail": "헤드라인 전월비 실제 상승률은 -0.4%로 직전 발표 0.5%보다 낮아 물가 상승 모멘텀이 둔화됐다.",
+        "evidence_paths": [
+          "facts.metrics.headline_mom.actual_display",
+          "facts.metrics.headline_mom.previous_display",
+          "facts.metrics.headline_mom.momentum_direction"
+        ]
+      },
+      {
+        "title": "헤드라인 전년비 흐름",
+        "detail": "헤드라인 전년비 실제 상승률은 3.5%로 직전 발표 4.2%보다 낮아 물가 상승 모멘텀이 둔화됐다.",
+        "evidence_paths": [
+          "facts.metrics.headline_yoy.actual_display",
+          "facts.metrics.headline_yoy.previous_display",
+          "facts.metrics.headline_yoy.momentum_direction"
+        ]
+      },
+      {
+        "title": "근원 전월비 흐름",
+        "detail": "근원 전월비 실제 상승률은 -0.0%로 직전 발표 0.2%보다 낮아 물가 상승 모멘텀이 둔화됐다.",
+        "evidence_paths": [
+          "facts.metrics.core_mom.actual_display",
+          "facts.metrics.core_mom.previous_display",
+          "facts.metrics.core_mom.momentum_direction"
+        ]
+      },
+      {
+        "title": "근원 전년비 흐름",
+        "detail": "근원 전년비 실제 상승률은 2.6%로 직전 발표 2.9%보다 낮아 물가 상승 모멘텀이 둔화됐다.",
+        "evidence_paths": [
+          "facts.metrics.core_yoy.actual_display",
+          "facts.metrics.core_yoy.previous_display",
+          "facts.metrics.core_yoy.momentum_direction"
+        ]
+      }
+    ],
+    "risks_and_caveats": [
+      "이 결과는 입력된 CPI 최초 발표값만 사용한 규칙 기반 해석이다.",
+      "정책 신호는 기계적 분류이며 투자 판단이나 정책 예측으로 사용할 수 없다."
+    ],
+    "unsupported_sections": [
+      {
+        "section": "market_reaction",
+        "reason": "시장 가격 데이터가 입력에 없어 실제 반응을 판단할 수 없다."
+      },
+      {
+        "section": "asset_prices",
+        "reason": "자산 가격 데이터가 입력에 없어 가격 흐름을 판단할 수 없다."
+      },
+      {
+        "section": "yield_curve",
+        "reason": "수익률곡선 데이터가 입력에 없어 곡선 변화를 판단할 수 없다."
+      },
+      {
+        "section": "positioning",
+        "reason": "투자자 포지셔닝 데이터가 입력에 없어 수급 상태를 판단할 수 없다."
+      },
+      {
+        "section": "liquidity",
+        "reason": "유동성 데이터가 입력에 없어 금융 여건을 판단할 수 없다."
+      },
+      {
+        "section": "component_breakdown",
+        "reason": "CPI 세부 구성 항목이 입력에 없어 구성별 기여를 판단할 수 없다."
+      },
+      {
+        "section": "historical_analogs",
+        "reason": "역사적 비교 데이터가 입력에 없어 유사 사례를 제시할 수 없다."
+      },
+      {
+        "section": "forecast_probabilities",
+        "reason": "전망 확률 데이터가 입력에 없어 확률을 제시할 수 없다."
+      }
+    ],
+    "confidence": "medium"
+  },
+  "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "total_tokens": 0
+  },
+  "validation": {
+    "schema_valid": true,
+    "evidence_paths_valid": true,
+    "numeric_claims_valid": true,
+    "unsupported_market_claims_absent": true,
+    "consensus_claims_valid": true
+  }
+}
