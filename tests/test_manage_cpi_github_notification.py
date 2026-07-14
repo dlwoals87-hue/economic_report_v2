@@ -7,7 +7,7 @@ from scripts.automation import manage_cpi_github_notification as manager
 
 class ManageCpiGithubNotificationTests(unittest.TestCase):
     def success_payload(self):
-        return {"should_notify": True, "event_id": "US_CPI_2026_06", "reference_period": "2026-06", "notification_key": "cpi:US_CPI_2026_06:report-published", "provider": "rule_based", "external_api_called": False, "cost": "free", "processing_status": "PROCESSED_AND_INDEXED", "report_url": "https://owner.github.io/repo/docs/reports/US_CPI_2026_06.html"}
+        return {"should_notify": True, "event_id": "US_CPI_2026_06", "reference_period": "2026-06", "notification_key": "cpi:US_CPI_2026_06:report-published", "provider": "rule_based", "external_api_called": False, "cost": "free", "processing_status": "PROCESSED_AND_INDEXED", "report_url": "https://owner.github.io/repo/reports/US_CPI_2026_06.html"}
 
     def test_success_marker_and_body(self):
         key, _title, body = manager.success_issue(self.success_payload())
