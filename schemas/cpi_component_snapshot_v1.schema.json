@@ -1,0 +1,1 @@
+{"type":"object","required":["schema_version","indicator_type","reference_period","retrieved_at_utc","component_mapping_version","components","completeness","validation","source","integrity"],"properties":{"schema_version":{"const":"cpi-component-snapshot-v1"},"indicator_type":{"const":"CPI"},"components":{"type":"array"},"integrity":{"type":"object"}}}

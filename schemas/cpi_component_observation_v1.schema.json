@@ -1,0 +1,1 @@
+{"type":"object","required":["schema_version","provider","retrieved_at_utc","reference_period","requested_series","returned_series","components","validation","provenance"],"properties":{"schema_version":{"const":"cpi-component-observation-v1"},"provider":{"const":"BLS"},"reference_period":{"type":"string"},"components":{"type":"array"}}}
