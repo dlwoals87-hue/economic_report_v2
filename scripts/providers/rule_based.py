@@ -52,9 +52,9 @@ def _surprise_phrase(metric: dict[str, Any], consensus_available: bool) -> str:
     if not isinstance(display, str):
         return ""
     translated = {
-        "above_expected": "상회 방향",
-        "below_expected": "하회 방향",
-        "in_line": "부합 방향",
+        "above": "상회 방향",
+        "below": "하회 방향",
+        "inline": "부합 방향",
     }.get(direction, "판정 불가")
     return f" 예상치 대비 차이는 {display}로 {translated}이다."
 

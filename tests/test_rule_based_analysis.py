@@ -42,11 +42,11 @@ def make_facts(directions=None, *, consensus=False):
                 "raw": raw,
                 "display": display,
                 "direction": (
-                    "above_expected"
+                    "above"
                     if difference > 0
-                    else "below_expected"
+                    else "below"
                     if difference < 0
-                    else "in_line"
+                    else "inline"
                 ),
             }
             if "0.4%" not in percentage_tokens:

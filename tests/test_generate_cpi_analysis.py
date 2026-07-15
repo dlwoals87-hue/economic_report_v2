@@ -47,11 +47,15 @@ def metric(actual, previous, expected=None):
     }
     if expected is not None:
         surprise = actual_decimal - Decimal(expected)
-        direction = "above_expected" if surprise > 0 else "below_expected" if surprise < 0 else "in_line"
+        direction = "above" if surprise > 0 else "below" if surprise < 0 else "inline"
         payload["surprise"] = {
             "raw": decimal_plain(surprise),
             "display": f"{surprise.quantize(Decimal('0.1'), rounding=ROUND_HALF_UP):.1f}%p",
+            "unit": "percentage_point",
             "direction": direction,
+            "actual_raw": decimal_plain(actual_decimal),
+            "expected_raw": decimal_plain(Decimal(expected)),
+            "formula": "actual - expected",
         }
     return payload
 

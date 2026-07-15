@@ -1,0 +1,26 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "provider_id", "provider_name", "retrieved_at_utc", "observed_at_utc", "source_url", "source_reference", "source_document_sha256", "raw_response_path", "raw_response_sha256", "response_version", "event_id", "indicator_type", "country", "reference_period", "release_datetime_utc", "status", "metrics", "integrity"],
+  "properties": {
+    "schema_version": {"const": "cpi-consensus-observation-v1"},
+    "provider_id": {"type": "string"},
+    "provider_name": {"type": "string"},
+    "retrieved_at_utc": {"type": "string"},
+    "observed_at_utc": {"type": "string"},
+    "source_url": {"type": "string"},
+    "source_reference": {"type": "string"},
+    "source_document_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "raw_response_path": {"type": "string"},
+    "raw_response_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "response_version": {"type": "string"},
+    "event_id": {"type": "string"},
+    "indicator_type": {"const": "CPI"},
+    "country": {"const": "US"},
+    "reference_period": {"type": "string"},
+    "release_datetime_utc": {"type": "string"},
+    "status": {"enum": ["COMPLETE", "INCOMPLETE", "UNAVAILABLE", "INVALID", "STALE"]},
+    "metrics": {"type": "object"},
+    "integrity": {"type": "object"}
+  }
+}

@@ -12,6 +12,8 @@ from pathlib import Path, PurePath
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from scripts.consensus import cpi_contract
+
 
 METRIC_PATHS = {
     "headline_mom": ("headline", "mom"),
@@ -286,8 +288,27 @@ def load_locked_consensus(root: Path, event: dict[str, Any], release: dict[str, 
         }
     try:
         snapshot = _consensus_module.read_json(path)
+        if snapshot.get("schema_version") == cpi_contract.SNAPSHOT_SCHEMA:
+            cpi_contract.validate_snapshot(snapshot, event)
+            if release.get("event_id") != snapshot["event_id"] or release.get("reference_period") != snapshot["reference_period"]:
+                raise ReleaseCanonicalError("consensus snapshot does not match as_released")
+            expected = {
+                metric: parse_decimal(snapshot["metrics"][metric]["expected_raw"], metric)
+                for metric in CPI_METRICS
+            }
+            if any(value is None for value in expected.values()):
+                raise ReleaseCanonicalError("consensus snapshot expected values are invalid")
+            return {
+                "status": "locked",
+                "source": snapshot["provider"]["name"],
+                "entered_at_utc": snapshot["captured_at_utc"],
+                "locked_at_utc": snapshot["captured_at_utc"],
+                "path": cpi_contract.safe_relative(root, path),
+                "sha256": snapshot["integrity"]["sha256"],
+                "expected": expected,
+            }
         _consensus_module.validate_snapshot(snapshot)
-    except _consensus_module.ConsensusLockError as exc:
+    except (cpi_contract.CpiConsensusContractError, _consensus_module.ConsensusLockError) as exc:
         raise ReleaseCanonicalError(str(exc)) from exc
     if snapshot.get("event_id") != event["event_id"]:
         raise ReleaseCanonicalError("consensus snapshot event_id does not match calendar")
@@ -325,15 +346,19 @@ def build_surprise(actual_raw: Any, expected: Decimal | None) -> dict[str, str] 
         context.prec = 34
         surprise = actual - expected
     if surprise > 0:
-        direction = "above_expected"
+        direction = "above"
     elif surprise < 0:
-        direction = "below_expected"
+        direction = "below"
     else:
-        direction = "in_line"
+        direction = "inline"
     return {
         "raw": decimal_to_plain(surprise),
         "display": format_surprise_display(surprise),
+        "unit": "percentage_point",
         "direction": direction,
+        "actual_raw": decimal_to_plain(actual),
+        "expected_raw": decimal_to_plain(expected),
+        "formula": "actual - expected",
     }
 
 

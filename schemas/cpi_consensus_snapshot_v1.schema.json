@@ -1,0 +1,23 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "snapshot_id", "event_id", "indicator_type", "country", "reference_period", "release_datetime_utc", "captured_at_utc", "cutoff_before_release", "provider", "source", "observation", "metrics", "completeness", "validation", "integrity"],
+  "properties": {
+    "schema_version": {"const": "cpi-consensus-snapshot-v1"},
+    "snapshot_id": {"type": "string"},
+    "event_id": {"type": "string"},
+    "indicator_type": {"const": "CPI"},
+    "country": {"const": "US"},
+    "reference_period": {"type": "string"},
+    "release_datetime_utc": {"type": "string"},
+    "captured_at_utc": {"type": "string"},
+    "cutoff_before_release": {"const": true},
+    "provider": {"type": "object"},
+    "source": {"type": "object"},
+    "observation": {"type": "object"},
+    "metrics": {"type": "object"},
+    "completeness": {"const": "COMPLETE"},
+    "validation": {"type": "object"},
+    "integrity": {"type": "object"}
+  }
+}

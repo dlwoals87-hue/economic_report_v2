@@ -196,7 +196,7 @@ class ProcessCpiReleaseTests(unittest.TestCase):
             metric = self.read_analysis(root)["facts"]["metrics"]["headline_mom"]
             self.assertEqual(metric["expected"], "0.1")
             self.assertEqual(metric["surprise"]["raw"], "0.2")
-            self.assertEqual(metric["surprise"]["direction"], "above_expected")
+            self.assertEqual(metric["surprise"]["direction"], "above")
 
         self.run_temp(case, release=True, event=complete_calendar_event())
 

@@ -276,7 +276,7 @@ class BuildCpiReleaseCanonicalTests(unittest.TestCase):
             self.build(root)
             self.assertEqual(
                 read_canonical(root)["event"]["headline"]["mom"]["surprise"]["direction"],
-                "above_expected",
+                "above",
             )
         self.run_in_temp(case)
 
@@ -287,7 +287,7 @@ class BuildCpiReleaseCanonicalTests(unittest.TestCase):
             self.build(root)
             self.assertEqual(
                 read_canonical(root)["event"]["headline"]["yoy"]["surprise"]["direction"],
-                "below_expected",
+                "below",
             )
         self.run_in_temp(case)
 
@@ -298,7 +298,7 @@ class BuildCpiReleaseCanonicalTests(unittest.TestCase):
             self.build(root)
             self.assertEqual(
                 read_canonical(root)["event"]["core"]["mom"]["surprise"]["direction"],
-                "in_line",
+                "inline",
             )
         self.run_in_temp(case)
 

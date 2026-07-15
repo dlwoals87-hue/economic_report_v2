@@ -247,9 +247,7 @@ def _validate_metric(metric_key: str, metric: dict[str, Any], fields: tuple[str,
             "CANONICAL_SURPRISE_MISMATCH",
             f"{prefix}.surprise.raw does not match actual minus expected",
         )
-    expected_direction = (
-        "above_expected" if recalculated > 0 else "below_expected" if recalculated < 0 else "in_line"
-    )
+    expected_direction = "above" if recalculated > 0 else "below" if recalculated < 0 else "inline"
     if surprise.get("direction") != expected_direction:
         raise CpiAnalysisError(
             "CANONICAL_SURPRISE_MISMATCH",
@@ -259,6 +257,11 @@ def _validate_metric(metric_key: str, metric: dict[str, Any], fields: tuple[str,
         raise CpiAnalysisError(
             "CANONICAL_SURPRISE_MISMATCH",
             f"{prefix}.surprise.display is inconsistent",
+        )
+    if surprise.get("unit") != "percentage_point" or surprise.get("actual_raw") != _decimal_plain(actual_raw) or surprise.get("expected_raw") != _decimal_plain(expected) or surprise.get("formula") != "actual - expected":
+        raise CpiAnalysisError(
+            "CANONICAL_SURPRISE_MISMATCH",
+            f"{prefix}.surprise provenance is inconsistent",
         )
 
 
