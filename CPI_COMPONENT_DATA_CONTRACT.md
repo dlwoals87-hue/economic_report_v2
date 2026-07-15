@@ -34,7 +34,18 @@ headline reconciliation are supplied, each contribution is null with
 
 ## C2 Contract
 
-The future canonical location is `canonical.component_breakdown` with snapshot path/SHA,
-mapping version, reference period, component MoM/YoY values, and contribution status. C1
-does not write this field. Renderer values without component evidence must display
+The canonical location is `canonical.component_breakdown` with snapshot path/SHA,
+mapping version, reference period, component MoM/YoY values, and contribution status. C2
+adds this field only from a valid immutable COMPLETE component release; otherwise it writes
+an explicit unavailable status and the headline canonical remains valid. Renderer values
+without component evidence must display
 `미입력` or `산출 불가`, never sample weights or invented component values.
+# Live Capture Extension
+
+The parser contract is consumed by the separate C2 capture pipeline. Its raw BLS
+artifact is immutable evidence, and the event-level `components_as_released.json`
+is only created when every APPROVED component is complete for the headline release
+reference period. Component collection is optional for headline CPI: absence is
+represented as `component_breakdown.status = unavailable`, not as an invented zero
+or a blocking headline error. See `CPI_COMPONENT_CAPTURE_RUNBOOK.md` for batching,
+retry, and commit protections.

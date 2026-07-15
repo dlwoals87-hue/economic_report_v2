@@ -1,0 +1,153 @@
+name: Capture CPI Components
+
+on:
+  workflow_dispatch:
+    inputs:
+      event_id:
+        description: "CPI event_id whose headline release already exists."
+        required: true
+        type: string
+      run_tests:
+        description: "Run component fixture tests before capture."
+        required: false
+        default: true
+        type: boolean
+  schedule:
+    - cron: "36-56/5 8 * * 1-5"
+      timezone: "America/New_York"
+    - cron: "6,21,41 9 * * 1-5"
+      timezone: "America/New_York"
+    - cron: "11 10,12 * * 1-5"
+      timezone: "America/New_York"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cpi-component-capture
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BLS_API_KEY: ${{ secrets.BLS_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Run component fixture tests
+        if: github.event_name == 'workflow_dispatch' && inputs.run_tests
+        run: |
+          python -B -m unittest \
+            tests/test_bls_cpi_components.py \
+            tests/test_capture_cpi_components.py \
+            tests/test_capture_cpi_components_workflow.py
+
+      - name: Validate calendar
+        run: python scripts/validators/validate_calendar_events.py
+
+      - name: Capture CPI components
+        env:
+          EVENT_ID: ${{ github.event.inputs.event_id }}
+          RESULT_JSON: ${{ runner.temp }}/cpi_component_capture_result.json
+        run: |
+          if [ -n "${EVENT_ID:-}" ]; then
+            python scripts/automation/run_due_cpi_component_capture.py \
+              --event-id "$EVENT_ID" \
+              --enable-live-bls \
+              --result-json "$RESULT_JSON"
+          else
+            python scripts/automation/run_due_cpi_component_capture.py \
+              --enable-live-bls \
+              --result-json "$RESULT_JSON"
+          fi
+
+      - name: Validate component capture result
+        id: result
+        env:
+          RESULT_JSON: ${{ runner.temp }}/cpi_component_capture_result.json
+          COMMIT_PATHS_FILE: ${{ runner.temp }}/cpi_component_commit_paths.txt
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path, PurePosixPath
+
+          result = json.loads(Path(os.environ["RESULT_JSON"]).read_text(encoding="utf-8"))
+          status = result.get("status")
+          event_id = result.get("event_id")
+          paths = result.get("commit_paths") or []
+          allowed = {
+              f"data/releases/cpi/{event_id}/components_as_released.json",
+          }
+          if event_id:
+              allowed.add(f"data/raw/bls/cpi_components/{result.get('reference_period')}/retrieved_")
+          if status != "COMPONENTS_CAPTURED" and paths:
+              raise SystemExit("commit_paths must be empty unless components were captured")
+          if status == "COMPONENTS_CAPTURED":
+              if len(paths) != 2 or len(set(paths)) != 2:
+                  raise SystemExit("component capture requires exactly two unique paths")
+              for item in paths:
+                  pure = PurePosixPath(item)
+                  if not isinstance(item, str) or "\\" in item or pure.is_absolute() or ".." in pure.parts:
+                      raise SystemExit("unsafe component commit path")
+                  if item not in allowed and not item.startswith(f"data/raw/bls/cpi_components/{result.get('reference_period')}/retrieved_"):
+                      raise SystemExit("component commit path not allowed")
+                  path = Path(item)
+                  if not path.is_file() or path.is_symlink():
+                      raise SystemExit("component artifact must be a regular file")
+          Path(os.environ["COMMIT_PATHS_FILE"]).write_text("\n".join(paths) + ("\n" if paths else ""), encoding="utf-8")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"should_commit={'true' if status == 'COMPONENTS_CAPTURED' else 'false'}\n")
+              output.write(f"event_id={event_id or ''}\n")
+          PY
+
+      - name: Commit captured CPI components
+        if: steps.result.outputs.should_commit == 'true' && github.ref_name == 'main'
+        env:
+          COMMIT_PATHS_FILE: ${{ runner.temp }}/cpi_component_commit_paths.txt
+          STAGED_PATHS_FILE: ${{ runner.temp }}/cpi_component_staged_paths.txt
+          STAGED_STATUS_FILE: ${{ runner.temp }}/cpi_component_staged_status.txt
+          EVENT_ID: ${{ steps.result.outputs.event_id }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          while IFS= read -r path || [ -n "$path" ]; do
+            [ -n "$path" ] || continue
+            git add -- "$path"
+          done < "$COMMIT_PATHS_FILE"
+          git diff --cached --name-only > "$STAGED_PATHS_FILE"
+          git diff --cached --name-status > "$STAGED_STATUS_FILE"
+          python - <<'PY'
+          import os
+          from pathlib import Path, PurePosixPath
+
+          expected = [line for line in Path(os.environ["COMMIT_PATHS_FILE"]).read_text(encoding="utf-8").splitlines() if line]
+          staged = [line for line in Path(os.environ["STAGED_PATHS_FILE"]).read_text(encoding="utf-8").splitlines() if line]
+          statuses = [line.split("\t", 1) for line in Path(os.environ["STAGED_STATUS_FILE"]).read_text(encoding="utf-8").splitlines() if line]
+          event_id = os.environ["EVENT_ID"]
+          immutable = f"data/releases/cpi/{event_id}/components_as_released.json"
+          raw = [path for path in expected if path.startswith("data/raw/bls/cpi_components/")]
+          if len(expected) != 2 or len(set(expected)) != 2 or len(raw) != 1 or immutable not in expected:
+              raise SystemExit("component candidate paths are invalid")
+          if len(staged) != 2 or set(staged) != set(expected) or len(set(staged)) != 2:
+              raise SystemExit("staged paths do not exactly match component commit_paths")
+          if len(statuses) != 2 or {path for _, path in statuses} != set(expected):
+              raise SystemExit("staged name-status paths do not match component commit_paths")
+          for code, path in statuses:
+              pure = PurePosixPath(path)
+              if code != "A" or pure.is_absolute() or ".." in pure.parts or "\\" in path:
+                  raise SystemExit("invalid staged component artifact")
+              file_path = Path(path)
+              if not file_path.is_file() or file_path.is_symlink():
+                  raise SystemExit("staged component artifact is not a regular file")
+          PY
+          git commit -m "data: capture ${EVENT_ID} CPI components"
+          git push origin HEAD:main

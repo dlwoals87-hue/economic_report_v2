@@ -428,6 +428,57 @@ def _build_limitations_section(analysis: dict[str, Any]) -> str:
 """
 
 
+def _build_component_section(canonical: dict[str, Any]) -> str:
+    breakdown = canonical.get("component_breakdown")
+    if not isinstance(breakdown, dict) or breakdown.get("status") != "available":
+        return """<!-- CPI COMPONENT BREAKDOWN -->
+<section data-component-breakdown="unavailable">
+  <div class="shead"><span class="snum">04</span><h2>CPI 세부 지표 해석</h2></div>
+  <div class="card"><p>공식 CPI 세부 항목 snapshot이 아직 확보되지 않아 세부 항목 수치와 기여도는 표시하지 않습니다.</p></div>
+</section>
+"""
+    rows = breakdown.get("components")
+    if not isinstance(rows, list):
+        rows = []
+    groups = {"core": [], "extended": []}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        group = row.get("display_group")
+        if group not in groups:
+            group = "extended"
+        mom = row.get("mom") if isinstance(row.get("mom"), dict) else {}
+        yoy = row.get("yoy") if isinstance(row.get("yoy"), dict) else {}
+        contribution = row.get("contribution") if isinstance(row.get("contribution"), dict) else {}
+        groups[group].append(
+            "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
+            % (
+                _safe_text(row.get("display_name_ko")),
+                _safe_text(mom.get("display")),
+                _safe_text(yoy.get("display")),
+                _safe_text(contribution.get("contribution_display")),
+            )
+        )
+
+    def table(title: str, group: str) -> str:
+        body = "\n        ".join(groups[group]) or "<tr><td colspan=\"4\">가용 항목 없음</td></tr>"
+        return """<div class="card" data-component-group="%s">
+    <p><b>%s</b></p>
+    <table class="rt"><thead><tr><th>항목</th><th>전월비</th><th>전년비</th><th>기여도</th></tr></thead><tbody>
+        %s
+    </tbody></table>
+  </div>""" % (group, title, body)
+
+    return """<!-- CPI COMPONENT BREAKDOWN -->
+<section data-component-breakdown="available">
+  <div class="shead"><span class="snum">04</span><h2>CPI 세부 지표 해석</h2></div>
+  <div class="keyline">공식 BLS component snapshot 기반. 가중치 또는 산식이 없으면 기여도는 산출하지 않습니다.</div>
+  %s
+  %s
+</section>
+""" % (table("핵심 항목", "core"), table("확장 항목", "extended"))
+
+
 def _metadata_comment(
     *,
     event_id: str,
@@ -453,6 +504,7 @@ def _build_document(
     rendered_prefix: str,
     metric_values: dict[str, dict[str, str]],
     analysis: dict[str, Any],
+    canonical: dict[str, Any],
     metadata_comment: str,
 ) -> str:
     return (
@@ -462,6 +514,8 @@ def _build_document(
         + _build_analysis_section(analysis)
         + "\n"
         + _build_limitations_section(analysis)
+        + "\n"
+        + _build_component_section(canonical)
         + "\n"
         + '<div class="disclaimer">정보 제공용이며 투자 조언이 아닙니다. '
         + "최종 판단과 책임은 이용자에게 있습니다.</div>\n"
@@ -730,6 +784,7 @@ def build_report(
         rendered_prefix,
         metric_values,
         analysis_wrapper["analysis"],
+        canonical_payload,
         _metadata_comment(
             event_id=event_id,
             generated_at_utc=generated_at_utc,

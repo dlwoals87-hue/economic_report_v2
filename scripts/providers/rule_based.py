@@ -168,6 +168,10 @@ def generate_analysis(
         "unsupported_sections": [
             {"section": section, "reason": reason}
             for section, reason in UNSUPPORTED_REASONS.items()
+            if not (
+                section == "component_breakdown"
+                and facts.get("component_breakdown", {}).get("status") == "available"
+            )
         ],
         "confidence": confidence,
     }

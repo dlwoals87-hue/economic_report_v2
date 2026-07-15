@@ -363,6 +363,18 @@ def build_facts(canonical: dict[str, Any]) -> dict[str, Any]:
         }
         expected_states.append(expected is not None)
 
+    component_breakdown = canonical.get("component_breakdown")
+    if not isinstance(component_breakdown, dict):
+        component_facts = {"status": "unavailable", "reason": "COMPONENT_RELEASE_NOT_CAPTURED", "components": []}
+    else:
+        status = component_breakdown.get("status")
+        rows = component_breakdown.get("components")
+        component_facts = {
+            "status": status if status in {"available", "unavailable"} else "unavailable",
+            "reason": component_breakdown.get("reason"),
+            "contribution_status": component_breakdown.get("contribution_status"),
+            "components": rows if isinstance(rows, list) else [],
+        }
     return {
         "event_id": meta["event_id"],
         "reference_period": meta["reference_period"],
@@ -371,6 +383,7 @@ def build_facts(canonical: dict[str, Any]) -> dict[str, Any]:
         "consensus_available": all(expected_states),
         "allowed_percentage_tokens": percentage_tokens,
         "allowed_percentage_point_tokens": percentage_point_tokens,
+        "component_breakdown": component_facts,
     }
 
 

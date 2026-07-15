@@ -374,12 +374,92 @@ def build_metric(metric_key: str, release_metric: dict[str, Any], expected: Deci
     }
 
 
+def load_component_breakdown(root: Path, event: dict[str, Any]) -> dict[str, Any]:
+    """Return an optional, independently immutable component breakdown.
+
+    A missing or invalid component release deliberately does not invalidate the
+    headline CPI canonical.  The component capture has a separate retry cycle.
+    """
+    snapshot_path = root / "data" / "releases" / "cpi" / event["event_id"] / "components_as_released.json"
+    if not snapshot_path.exists():
+        return {"status": "unavailable", "reason": "COMPONENT_RELEASE_NOT_CAPTURED", "components": []}
+    if snapshot_path.is_symlink():
+        return {"status": "unavailable", "reason": "COMPONENT_RELEASE_INVALID", "components": []}
+    try:
+        snapshot = read_json(snapshot_path)
+        integrity = snapshot.get("integrity")
+        if (
+            snapshot.get("schema_version") != "cpi-component-release-v1"
+            or snapshot.get("event_id") != event["event_id"]
+            or snapshot.get("reference_period") != event["reference_period"]
+            or not isinstance(integrity, dict)
+            or integrity.get("immutable") is not True
+            or not isinstance(integrity.get("sha256"), str)
+        ):
+            raise ValueError("identity")
+        from scripts.collectors import bls_cpi_components as component_collector
+
+        if component_collector._sha(snapshot) != integrity["sha256"]:
+            raise ValueError("sha256")
+        raw_path_value = snapshot.get("raw_snapshot_path")
+        if isinstance(raw_path_value, str) and "\\" in raw_path_value:
+            raise ValueError("backslash")
+        raw_path = ensure_relative_source_path(raw_path_value, "components.raw_snapshot_path")
+        rows = snapshot.get("components")
+        if snapshot.get("completeness") != "COMPLETE" or not isinstance(rows, list) or not rows:
+            raise ValueError("completeness")
+    except (OSError, ValueError, ReleaseCanonicalError):
+        return {"status": "unavailable", "reason": "COMPONENT_RELEASE_INVALID", "components": []}
+
+    registry = read_json(root / "config" / "bls_cpi_component_series.json")
+    details = {item["component_id"]: item for item in registry.get("components", []) if isinstance(item, dict)}
+    approved_ids = {
+        item["component_id"]
+        for item in details.values()
+        if item.get("mapping_status") == "APPROVED"
+    }
+    normalized: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict) or not isinstance(row.get("component_id"), str):
+            return {"status": "unavailable", "reason": "COMPONENT_RELEASE_INVALID", "components": []}
+        detail = details.get(row["component_id"])
+        if detail is None or detail.get("mapping_status") != "APPROVED":
+            return {"status": "unavailable", "reason": "COMPONENT_RELEASE_INVALID", "components": []}
+        normalized.append(
+            {
+                "component_id": row["component_id"],
+                "display_name_ko": detail["display_name_ko"],
+                "display_group": detail["display_group"],
+                "mom": row.get("mom"),
+                "yoy": row.get("yoy"),
+                "contribution": row.get("contribution"),
+            }
+        )
+    if {item["component_id"] for item in normalized} != approved_ids:
+        return {"status": "unavailable", "reason": "COMPONENT_RELEASE_INVALID", "components": []}
+    return {
+        "status": "available",
+        "source": {
+            "component_release_path": relative_path(snapshot_path, root),
+            "component_release_sha256": integrity["sha256"],
+            "raw_snapshot_path": raw_path,
+            "raw_snapshot_sha256": snapshot.get("raw_snapshot_sha256"),
+            "provider": snapshot.get("provider"),
+            "registry_version": snapshot.get("registry_version"),
+            "registry_sha256": snapshot.get("registry_sha256"),
+        },
+        "contribution_status": snapshot.get("contribution_status"),
+        "components": normalized,
+    }
+
+
 def build_canonical_payload(
     event: dict[str, Any],
     release: dict[str, Any],
     profiles: dict[str, Any],
     release_path_value: str,
     consensus: dict[str, Any],
+    component_breakdown: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     release_dt = parse_utc_datetime(event["release_datetime_utc"], "release_datetime_utc")
     profile = profiles.get("CPI", {}) if isinstance(profiles, dict) else {}
@@ -415,7 +495,7 @@ def build_canonical_payload(
         "source.raw_snapshot_path",
     )
     sha256 = release["integrity"]["sha256"]
-    return {
+    payload = {
         "schema_version": "1.0",
         "meta": {
             "event_id": event["event_id"],
@@ -451,6 +531,12 @@ def build_canonical_payload(
             "key_points": [],
         },
     }
+    payload["component_breakdown"] = component_breakdown or {
+        "status": "unavailable",
+        "reason": "COMPONENT_RELEASE_NOT_CAPTURED",
+        "components": [],
+    }
+    return payload
 
 
 def write_canonical(path: Path, payload: dict[str, Any]) -> str:
@@ -493,7 +579,15 @@ def build_from_files(root: Path, event_id: str, output: str | None = None) -> Bu
     validate_release_payload(release, event)
     profiles = read_json(root / "data" / "indicator_profiles.json")
     consensus = load_locked_consensus(root, event, release)
-    canonical = build_canonical_payload(event, release, profiles, capture_path_value, consensus)
+    component_breakdown = load_component_breakdown(root, event)
+    canonical = build_canonical_payload(
+        event,
+        release,
+        profiles,
+        capture_path_value,
+        consensus,
+        component_breakdown,
+    )
     status = write_canonical(output_path, canonical)
     return BuildResult(
         status=status,

@@ -185,10 +185,11 @@ def build_request_payload(
     request_now: datetime,
     api_key: str | None = None,
     registered: bool = False,
+    series_ids: list[str] | tuple[str, ...] | None = None,
 ) -> dict[str, Any]:
     startyear, endyear = request_year_range(request_now)
     payload = {
-        "seriesid": list(SOURCE_SERIES.values()),
+        "seriesid": list(SOURCE_SERIES.values()) if series_ids is None else list(series_ids),
         "startyear": startyear,
         "endyear": endyear,
     }
@@ -230,6 +231,7 @@ def fetch_bls_response(
     api_key: str | None,
     now: datetime | None = None,
     logger: Callable[[str], None] | None = print,
+    series_ids: list[str] | tuple[str, ...] | None = None,
 ) -> FetchResult:
     request_now = now or utc_now()
     request_count = 0
@@ -237,14 +239,14 @@ def fetch_bls_response(
     if api_key:
         if logger:
             logger("BLS request mode: registered")
-        registered_payload = build_request_payload(request_now, api_key=api_key, registered=True)
+        registered_payload = build_request_payload(request_now, api_key=api_key, registered=True, series_ids=series_ids)
         registered_response = post_bls_payload(registered_payload)
         request_count += 1
         if is_registration_key_rejected(registered_response, api_key):
             if logger:
                 logger("Registered key rejected; retrying in unregistered mode")
                 logger("BLS request mode: unregistered")
-            unregistered_payload = build_request_payload(request_now, registered=False)
+            unregistered_payload = build_request_payload(request_now, registered=False, series_ids=series_ids)
             unregistered_response = post_bls_payload(unregistered_payload)
             request_count += 1
             return FetchResult(
@@ -270,7 +272,7 @@ def fetch_bls_response(
 
     if logger:
         logger("BLS request mode: unregistered")
-    unregistered_payload = build_request_payload(request_now, registered=False)
+    unregistered_payload = build_request_payload(request_now, registered=False, series_ids=series_ids)
     unregistered_response = post_bls_payload(unregistered_payload)
     request_count += 1
     return FetchResult(
